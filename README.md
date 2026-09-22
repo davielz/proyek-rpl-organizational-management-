@@ -1,58 +1,133 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Campus Organization Management System
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
+![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=for-the-badge&logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-10.11-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-v4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
 
-## About Laravel
+**Campus Organization Management System** adalah aplikasi manajemen terpadu yang dirancang khusus untuk mengelola operasional, kegiatan, administrasi proposal/LPJ, serta umpan balik (feedback) dan analisis sentimen pada organisasi atau Unit Kegiatan Mahasiswa (UKM) di lingkungan kampus.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Aplikasi ini dibangun menggunakan arsitektur monolitik modern berbasis **Laravel 12**, **Blade**, **Livewire**, **Tailwind CSS v4**, serta didukung integrasi **LLM API (AI)** dan **DomPDF**.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🚀 Fitur Utama & Ruang Lingkup MVP
 
-## Learning Laravel
+1. **Authentication & Multi-Role Access Control**:
+   - Sistem login, registrasi, logout, dan manajemen profil.
+   - Otorisasi terproteksi penuh pada sisi server (*server-side authorization*) untuk 3 peranan utama:
+     - **Admin**: Mengelola pengguna, hak akses (*role*), meninjau proposal, dan melihat analitik global.
+     - **Pengurus Organisasi**: Mempublikasikan kegiatan, menyusun proposal/LPJ dengan AI helper, dan memantau ulasan.
+     - **Anggota / Peserta**: Melihat katalog kegiatan, mendaftar kegiatan, dan memberikan ulasan & rating.
+2. **Manajemen Kegiatan Organisasi (Events)**:
+   - Pengelolaan siklus hidup kegiatan (*draft, pending, active, completed, cancelled*).
+   - Penjadwalan, lokasi, kuota, serta pendaftaran & absensi peserta.
+3. **Proposal & LPJ dengan AI Helper & Export PDF**:
+   - Penyusunan draf proposal dan LPJ kegiatan.
+   - Bantuan AI generator untuk menyempurnakan latar belakang, tujuan, dan kesimpulan.
+   - Fitur ekspor dokumen ke format PDF secara instan.
+4. **Feedback Kegiatan & Sentiment Analysis**:
+   - Formulir umpan balik interaktif untuk peserta kegiatan.
+   - Analisis sentimen otomatis berbasis AI (*Positif, Netral, Negatif*) beserta skor kepercayaan.
+5. **Dashboard Organisasi**:
+   - Tampilan antarmuka dinamis sesuai role pengguna dengan ringkasan statistik kegiatan.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🛠️ Tech Stack
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+- **Framework**: Laravel 12 (PHP 8.5)
+- **Database**: MySQL / MariaDB (`campus_org`)
+- **Frontend / Styling**: Blade Components, Livewire, Tailwind CSS v4
+- **AI Integration**: Laravel HTTP Client & REST API (OpenAI / Gemini / Groq compatible)
+- **PDF Export**: DomPDF (`barryvdh/laravel-dompdf`)
+- **Testing & Quality Assurance**: PHPUnit, Laravel Pint, Laravel Boost
 
-## Agentic Development
+---
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## 🔑 Kredensial Demo Development
+
+Database awal secara otomatis dilengkapi dengan data contoh (*seed data*). Semua akun default menggunakan password: `password`
+
+| Peran (Role) | Email Login | Password | Deskripsi Akses |
+|---|---|---|---|
+| **Admin** | `admin@campus.ac.id` | `password` | Pengelola global sistem & peranan user |
+| **Pengurus** | `pengurus@campus.ac.id` | `password` | Pengurus UKM HMTI (Pengelola Kegiatan) |
+| **Anggota 1** | `anggota1@campus.ac.id` | `password` | Anggota terdaftar |
+| **Anggota 2** | `anggota2@campus.ac.id` | `password` | Anggota terdaftar |
+| **Anggota 3** | `anggota3@campus.ac.id` | `password` | Anggota terdaftar |
+
+---
+
+## 📦 Panduan Instalasi & Jalankan Lokal
+
+### 1. Prasyarat
+- PHP >= 8.3 / 8.5
+- Composer
+- Node.js (v20+) & npm
+- MariaDB / MySQL Server
+
+### 2. Langkah Instalasi
 
 ```bash
-composer require laravel/boost --dev
+# 1. Clone repository
+git clone git@github.com:davielz/organizational-management.git
+cd organizational-management
 
-php artisan boost:install
+# 2. Install PHP Dependencies
+composer install
+
+# 3. Install NPM Dependencies
+npm install
+
+# 4. Salin Environment File & Buat Kunci Aplikasi
+cp .env.example .env
+php artisan key:generate
+
+# 5. Konfigurasi Koneksi Database di .env
+# DB_CONNECTION=mysql
+# DB_HOST=127.0.0.1
+# DB_PORT=3306
+# DB_DATABASE=campus_org
+# DB_USERNAME=root
+# DB_PASSWORD=root
+
+# 6. Jalankan Migrasi & Seeder Database
+php artisan migrate:fresh --seed
+
+# 7. Build Aset Frontend
+npm run build
+
+# 8. Jalankan Dev Server
+php artisan serve
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Aplikasi dapat diakses di browser melalui URL: `http://localhost:8000`
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 🧪 Pengujian & Testing
 
-## Code of Conduct
+Jalankan perintah berikut untuk memastikan seluruh pengujian otomatis (*automated test suite*) dan pemformatan kode berjalan bersih:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+# Jalankan PHPUnit Test Suite
+php artisan test
 
-## Security Vulnerabilities
+# Jalankan Formatter Kode Laravel Pint
+vendor/bin/pint --format agent
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+---
 
-## License
+## 📑 Dokumentasi Teknis Terkait
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Detail rancangan proyek dan skema teknis selengkapnya dapat dilihat pada direktori `docs/`:
+
+- 📄 [docs/project-overview.md](docs/project-overview.md) – Gambaran umum produk, MVP scope, dan tahapan pengembangan.
+- 📄 [docs/technical-blueprint.md](docs/technical-blueprint.md) – Blueprint arsitektur teknis, ERD, alur kerja, dan peta rute.
+- 📄 [docs/database.md](docs/database.md) – Dokumentasi struktur tabel basis data, indeks, dan relasi Eloquent.
+
+---
+
+&copy; {{ date('Y') }} Campus Organization Management System. Developed with Vibe Coding approach.
