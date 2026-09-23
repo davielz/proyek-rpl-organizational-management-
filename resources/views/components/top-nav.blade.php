@@ -19,15 +19,21 @@
 
     <!-- Top Right Items -->
     <div class="flex items-center space-x-3">
-        <!-- Role Badge -->
-        <x-badge :status="auth()->user()->role" size="md" />
+        @auth
+            <!-- Role Badge -->
+            <x-badge :status="auth()->user()->role" size="md" />
 
-        <!-- User Profile Quick Link -->
-        <a href="{{ route('profile.edit') }}" class="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-800/80 transition-colors text-slate-300 hover:text-white">
-            <div class="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center">
-                {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-            </div>
-            <span class="text-xs font-semibold hidden sm:inline-block">{{ auth()->user()->name }}</span>
-        </a>
+            <!-- User Profile Quick Link -->
+            <a href="{{ route('profile.edit') }}" class="flex items-center space-x-2 p-1.5 rounded-xl hover:bg-slate-800/80 transition-colors text-slate-300 hover:text-white">
+                <div class="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xs flex items-center justify-center">
+                    {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                </div>
+                <span class="text-xs font-semibold hidden sm:inline-block">{{ auth()->user()->name }}</span>
+            </a>
+        @else
+            <a href="{{ route('login') }}" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
+                Masuk
+            </a>
+        @endauth
     </div>
 </header>
