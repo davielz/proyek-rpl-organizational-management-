@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ManageEventController;
 use App\Http\Controllers\ProfileController;
@@ -54,6 +55,20 @@ Route::middleware('auth')->group(function () {
         Route::put('/events/{event}', [ManageEventController::class, 'update'])->name('events.update');
         Route::delete('/events/{event}', [ManageEventController::class, 'destroy'])->name('events.destroy');
         Route::put('/events/{event}/status', [ManageEventController::class, 'updateStatus'])->name('events.update-status');
+    });
+
+    // Proposal & LPJ Document Routes (Admin & Pengurus)
+    Route::middleware('role:admin,pengurus')->group(function () {
+        Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+        Route::get('/documents/create', [DocumentController::class, 'create'])->name('documents.create');
+        Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
+        Route::get('/documents/{document}', [DocumentController::class, 'show'])->name('documents.show');
+        Route::get('/documents/{document}/edit', [DocumentController::class, 'edit'])->name('documents.edit');
+        Route::put('/documents/{document}', [DocumentController::class, 'update'])->name('documents.update');
+        Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+        Route::post('/documents/{document}/submit', [DocumentController::class, 'submit'])->name('documents.submit');
+        Route::post('/documents/{document}/review', [DocumentController::class, 'review'])->name('documents.review');
+        Route::get('/documents/{document}/pdf', [DocumentController::class, 'exportPdf'])->name('documents.pdf');
     });
 
     // Admin Only Routes
