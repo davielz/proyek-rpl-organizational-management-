@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AiDraftController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
@@ -69,6 +70,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/documents/{document}/submit', [DocumentController::class, 'submit'])->name('documents.submit');
         Route::post('/documents/{document}/review', [DocumentController::class, 'review'])->name('documents.review');
         Route::get('/documents/{document}/pdf', [DocumentController::class, 'exportPdf'])->name('documents.pdf');
+        Route::post('/documents/generate-ai-draft', [AiDraftController::class, 'generate'])->name('documents.generate-ai-draft');
     });
 
     // Admin Only Routes

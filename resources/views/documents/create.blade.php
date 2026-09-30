@@ -14,7 +14,7 @@
         </x-page-header>
     </x-slot:header>
 
-    <div class="max-w-4xl mx-auto space-y-6">
+    <div class="max-w-4xl mx-auto space-y-6" x-data="documentForm()">
         @if ($errors->any())
             <x-alert type="error" title="Terdapat Kesalahan Validasi">
                 <ul class="list-disc list-inside text-xs space-y-1 mt-1">
@@ -25,8 +25,22 @@
             </x-alert>
         @endif
 
+        <!-- AI Banner Status Notification -->
+        <template x-if="aiNotice.message">
+            <div :class="aiNotice.isFallback ? 'bg-amber-950/40 border-amber-500/30 text-amber-300' : 'bg-indigo-950/50 border-indigo-500/40 text-indigo-200'" class="p-4 rounded-xl border flex items-start justify-between gap-3 text-xs shadow-lg transition-all">
+                <div class="flex items-start space-x-3">
+                    <span class="p-1 rounded-lg bg-indigo-500/20 text-indigo-400 font-bold shrink-0 mt-0.5" x-text="aiNotice.isFallback ? '⚡' : '✨'"></span>
+                    <div>
+                        <strong class="font-bold block" x-text="aiNotice.isFallback ? 'Draf AI (Fallback Template):' : 'AI Assistant Success:'"></strong>
+                        <span x-text="aiNotice.message"></span>
+                    </div>
+                </div>
+                <button type="button" @click="aiNotice.message = ''" class="text-slate-400 hover:text-white">&times;</button>
+            </div>
+        </template>
+
         <x-card class="p-6">
-            <form action="{{ route('documents.store') }}" method="POST" class="space-y-6" x-data="documentForm()">
+            <form action="{{ route('documents.store') }}" method="POST" class="space-y-6">
                 @csrf
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -83,15 +97,45 @@
                     @enderror
                 </div>
 
-                <!-- Template Helper Buttons -->
-                <div class="p-4 bg-indigo-950/40 border border-indigo-500/20 rounded-xl flex flex-wrap items-center justify-between gap-3">
-                    <div class="flex items-center space-x-2 text-indigo-300 text-xs">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span>Gunakan template konten otomatis untuk membantu pengisian awal:</span>
+                <!-- AI Draft Generator Card & Template Helper -->
+                <div class="p-4 bg-gradient-to-r from-indigo-950/60 via-slate-900 to-purple-950/40 border border-indigo-500/30 rounded-2xl space-y-3 shadow-inner">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="space-y-0.5">
+                            <div class="flex items-center space-x-2 text-indigo-300 font-bold text-xs">
+                                <svg class="w-4 h-4 text-indigo-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                <span>AI Assistant Helper</span>
+                            </div>
+                            <p class="text-[11px] text-slate-400">
+                                Buat draf awal dokumen otomatis berdasarkan data kegiatan yang dipilih. Draf dapat Anda periksa dan sesuaikan sebelum diajukan.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center space-x-2 shrink-0">
+                            <button
+                                type="button"
+                                @click="generateAiDraft()"
+                                :disabled="isGeneratingAi || !eventId"
+                                class="px-4 py-2 text-xs font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white rounded-xl transition-all shadow-md shadow-indigo-600/30 flex items-center space-x-2"
+                            >
+                                <template x-if="isGeneratingAi">
+                                    <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                </template>
+                                <span x-text="isGeneratingAi ? 'Menyusun Draf AI...' : '✨ Generate Draf dengan AI'"></span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="loadTemplate()"
+                                class="px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-colors border border-slate-700"
+                                title="Gunakan template standar manual"
+                            >
+                                Template Standar
+                            </button>
+                        </div>
                     </div>
-                    <button type="button" @click="loadTemplate()" class="px-3 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">
-                        Isi Template Standar
-                    </button>
                 </div>
 
                 <!-- Background -->
@@ -167,6 +211,12 @@
                 budgetPlan: '{{ old('budget_plan') }}',
                 summaryContent: '{{ old('summary_content') }}',
 
+                isGeneratingAi: false,
+                aiNotice: {
+                    message: '',
+                    isFallback: false
+                },
+
                 updateTitle() {
                     const select = document.querySelector('select[name="event_id"]');
                     const selectedOption = select ? select.options[select.selectedIndex] : null;
@@ -175,6 +225,51 @@
                     if (eventTitle && !this.title) {
                         const prefix = this.docType === 'proposal' ? 'Proposal Kegiatan' : 'Laporan Pertanggungjawaban (LPJ)';
                         this.title = `${prefix}: ${eventTitle}`;
+                    }
+                },
+
+                async generateAiDraft() {
+                    if (!this.eventId) {
+                        alert('Silakan pilih kegiatan terlebih dahulu.');
+                        return;
+                    }
+
+                    this.isGeneratingAi = true;
+                    this.aiNotice.message = '';
+
+                    try {
+                        const response = await fetch('{{ route('documents.generate-ai-draft') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                event_id: this.eventId,
+                                type: this.docType
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (response.ok && result.success && result.data) {
+                            this.title = result.data.title || this.title;
+                            this.background = result.data.background || '';
+                            this.objectives = result.data.objectives || '';
+                            this.budgetPlan = result.data.budget_plan || '';
+                            this.summaryContent = result.data.summary_content || '';
+
+                            this.aiNotice.message = result.message || 'Draf berhasil dimuat ke editor.';
+                            this.aiNotice.isFallback = result.is_fallback || false;
+                        } else {
+                            alert(result.message || 'Gagal menghasilkan draf AI.');
+                        }
+                    } catch (error) {
+                        console.error('AI Draft Error:', error);
+                        alert('Terjadi kesalahan jaringan saat meminta draf AI.');
+                    } finally {
+                        this.isGeneratingAi = false;
                     }
                 },
 
