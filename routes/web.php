@@ -23,9 +23,9 @@ Route::get('/', function () {
 // Guest Routes
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
-    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 });
 
 // Event Catalog & Public Routes
@@ -71,7 +71,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/documents/{document}/submit', [DocumentController::class, 'submit'])->name('documents.submit');
         Route::post('/documents/{document}/review', [DocumentController::class, 'review'])->name('documents.review');
         Route::get('/documents/{document}/pdf', [DocumentController::class, 'exportPdf'])->name('documents.pdf');
-        Route::post('/documents/generate-ai-draft', [AiDraftController::class, 'generate'])->name('documents.generate-ai-draft');
+        Route::post('/documents/generate-ai-draft', [AiDraftController::class, 'generate'])->middleware('throttle:10,1')->name('documents.generate-ai-draft');
 
         // Feedback & Sentiment Analysis Analytics (Admin & Pengurus)
         Route::get('/feedback', [FeedbackController::class, 'index'])->name('feedback.index');
