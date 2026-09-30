@@ -195,4 +195,29 @@ class EventManagementTest extends TestCase
         $response = $this->actingAs($anggota)->get('/manage/events');
         $response->assertStatus(403);
     }
+
+    public function test_anggota_can_re_register_after_cancelling_registration(): void
+    {
+        $anggota = User::factory()->anggota()->create();
+        $event = Event::factory()->create([
+            'status' => 'active',
+            'start_time' => now()->addDays(3),
+            'end_time' => now()->addDays(3)->addHours(2),
+        ]);
+
+        EventRegistration::create([
+            'event_id' => $event->id,
+            'user_id' => $anggota->id,
+            'status' => 'cancelled',
+        ]);
+
+        $response = $this->actingAs($anggota)->post("/events/{$event->slug}/register");
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('event_registrations', [
+            'event_id' => $event->id,
+            'user_id' => $anggota->id,
+            'status' => 'registered',
+        ]);
+    }
 }

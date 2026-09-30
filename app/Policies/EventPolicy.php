@@ -71,8 +71,8 @@ class EventPolicy
             return false;
         }
 
-        // Already registered?
-        if ($event->registrations()->where('user_id', $user->id)->exists()) {
+        // Already registered with active registration?
+        if ($event->registrations()->where('user_id', $user->id)->where('status', '!=', 'cancelled')->exists()) {
             return false;
         }
 

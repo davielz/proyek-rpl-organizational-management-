@@ -14,7 +14,7 @@ class EventController extends Controller
 
     public function index(Request $request)
     {
-        $query = Event::with('organization')
+        $query = Event::with(['organization', 'registrations'])
             ->whereIn('status', ['active', 'completed']);
 
         if ($request->filled('search')) {
