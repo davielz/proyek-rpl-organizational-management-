@@ -6,6 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ManageEventController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
@@ -71,7 +72,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/documents/{document}/review', [DocumentController::class, 'review'])->name('documents.review');
         Route::get('/documents/{document}/pdf', [DocumentController::class, 'exportPdf'])->name('documents.pdf');
         Route::post('/documents/generate-ai-draft', [AiDraftController::class, 'generate'])->name('documents.generate-ai-draft');
+
+        // Feedback & Sentiment Analysis Analytics (Admin & Pengurus)
+        Route::get('/feedback', [FeedbackController::class, 'index'])->name('feedback.index');
     });
+
+    // Feedback Submission Route (All Authenticated Members)
+    Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
 
     // Admin Only Routes
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {

@@ -35,21 +35,24 @@ class EventController extends Controller
     {
         $this->authorize('view', $event);
 
-        $event->load(['organization', 'creator', 'registrations.user']);
+        $event->load(['organization', 'creator', 'registrations.user', 'feedbacks.user']);
 
         $user = $request->user();
         $isRegistered = false;
         $userRegistration = null;
+        $userFeedback = null;
 
         if ($user) {
             $userRegistration = $event->registrations->where('user_id', $user->id)->first();
             $isRegistered = $userRegistration && $userRegistration->status !== 'cancelled';
+            $userFeedback = $event->feedbacks->where('user_id', $user->id)->first();
         }
 
         $registeredCount = $event->registrations->where('status', '!=', 'cancelled')->count();
         $isFull = $event->quota > 0 && $registeredCount >= $event->quota;
+        $avgRating = $event->feedbacks->count() > 0 ? round($event->feedbacks->avg('rating'), 1) : 0;
 
-        return view('events.show', compact('event', 'isRegistered', 'userRegistration', 'registeredCount', 'isFull'));
+        return view('events.show', compact('event', 'isRegistered', 'userRegistration', 'userFeedback', 'registeredCount', 'isFull', 'avgRating'));
     }
 
     public function register(Request $request, Event $event)

@@ -20,6 +20,8 @@ class EventFeedback extends Model
         'comment',
         'sentiment',
         'sentiment_score',
+        'topics',
+        'analysis_status',
     ];
 
     protected function casts(): array
@@ -27,6 +29,7 @@ class EventFeedback extends Model
         return [
             'rating' => 'integer',
             'sentiment_score' => 'float',
+            'topics' => 'array',
         ];
     }
 

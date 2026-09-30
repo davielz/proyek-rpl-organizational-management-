@@ -96,6 +96,101 @@
                         </x-table>
                     @endif
                 </x-card>
+                <!-- Feedback & Ulasan Section -->
+                <x-card>
+                    <x-card.header title="Ulasan & Feedback Kegiatan" :subtitle="$event->feedbacks->count() > 0 ? 'Rata-rata Rating: ' . $avgRating . ' / 5.0 (' . $event->feedbacks->count() . ' ulasan)' : 'Belum ada ulasan'">
+                        @can('viewAny', \App\Models\EventFeedback::class)
+                            <x-slot:action>
+                                <a href="{{ route('feedback.index', ['event_id' => $event->id]) }}" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+                                    Lihat Analisis Sentimen &rarr;
+                                </a>
+                            </x-slot:action>
+                        @endcan
+                    </x-card.header>
+                    <x-card.body class="space-y-6">
+                        @auth
+                            @if ($userFeedback)
+                                <div class="p-4 bg-slate-950/60 border border-slate-800 rounded-xl space-y-3">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-xs font-bold text-slate-400">Ulasan Anda:</span>
+                                            <div class="flex text-amber-400 text-sm">
+                                                @for($i = 1; $i <= 5; $i++)
+                                                    <span>{{ $i <= $userFeedback->rating ? '★' : '☆' }}</span>
+                                                @endfor
+                                            </div>
+                                        </div>
+
+                                        <!-- AI Sentiment Badge -->
+                                        @if($userFeedback->sentiment === 'positive')
+                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                ✨ Sentimen Positif
+                                            </span>
+                                        @elseif($userFeedback->sentiment === 'negative')
+                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                                ⚠️ Sentimen Negatif
+                                            </span>
+                                        @else
+                                            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-slate-300 border border-slate-700">
+                                                💬 Sentimen Netral
+                                            </span>
+                                        @endif
+                                    </div>
+
+                                    <p class="text-sm text-slate-200">{{ $userFeedback->comment }}</p>
+
+                                    @if(!empty($userFeedback->topics))
+                                        <div class="flex items-center space-x-1 text-[11px] text-slate-400">
+                                            <span>Topik:</span>
+                                            @foreach($userFeedback->topics as $topic)
+                                                <span class="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300">#{{ $topic }}</span>
+                                            @endforeach
+                                        </div>
+                                    @endif
+                                </div>
+                            @else
+                                <form action="{{ route('feedback.store') }}" method="POST" class="space-y-4 p-4 bg-slate-950/40 border border-slate-800 rounded-xl" x-data="{ rating: 5 }">
+                                    @csrf
+                                    <input type="hidden" name="event_id" value="{{ $event->id }}">
+
+                                    <div class="space-y-2">
+                                        <label class="block text-xs font-semibold text-slate-300">Berikan Rating Bintang *</label>
+                                        <div class="flex items-center space-x-2">
+                                            <template x-for="star in 5">
+                                                <button
+                                                    type="button"
+                                                    @click="rating = star"
+                                                    class="text-2xl transition-colors focus:outline-none"
+                                                    :class="star <= rating ? 'text-amber-400' : 'text-slate-700 hover:text-amber-300'"
+                                                >★</button>
+                                            </template>
+                                            <input type="hidden" name="rating" :value="rating">
+                                            <span class="text-xs text-amber-400 font-bold ml-2" x-text="rating + ' / 5 Bintang'"></span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <x-textarea
+                                            name="comment"
+                                            label="Komentar & Masukan Ulasan *"
+                                            rows="3"
+                                            placeholder="Bagikan pengalaman, masukan, dan saran Anda mengenai kegiatan ini..."
+                                            required
+                                        />
+                                    </div>
+
+                                    <div class="flex justify-end">
+                                        <x-button type="submit" variant="primary" size="sm">
+                                            Kirim Ulasan & Feedback
+                                        </x-button>
+                                    </div>
+                                </form>
+                            @endif
+                        @else
+                            <p class="text-xs text-slate-400">Silakan <a href="{{ route('login') }}" class="text-indigo-400 underline">masuk</a> untuk memberikan ulasan kegiatan.</p>
+                        @endauth
+                    </x-card.body>
+                </x-card>
             </div>
 
             <!-- Right Column: Registration Card & Action -->
