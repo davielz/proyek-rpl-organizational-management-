@@ -76,7 +76,7 @@
                                         {{ $event->title }}
                                     </a>
                                     <div class="text-xs text-slate-400 font-normal truncate max-w-xs">{{ $event->location }}</div>
-                                </td
+                                </x-table.td>
                                 <x-table.td>
                                     <span class="text-xs font-semibold text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
                                         {{ $event->organization->code ?? 'Org' }}
