@@ -9,6 +9,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ManageEventController;
+use App\Http\Controllers\PollController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -81,6 +82,17 @@ Route::middleware('auth')->group(function () {
 
     // Feedback Submission Route (All Authenticated Members)
     Route::post('/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
+
+    // Polling Routes (All Authenticated Members can view list, detail, and vote)
+    Route::get('/polls', [PollController::class, 'index'])->name('polls.index');
+    Route::get('/polls/create', [PollController::class, 'create'])->name('polls.create');
+    Route::post('/polls', [PollController::class, 'store'])->name('polls.store');
+    Route::get('/polls/{poll}', [PollController::class, 'show'])->name('polls.show');
+    Route::get('/polls/{poll}/edit', [PollController::class, 'edit'])->name('polls.edit');
+    Route::put('/polls/{poll}', [PollController::class, 'update'])->name('polls.update');
+    Route::delete('/polls/{poll}', [PollController::class, 'destroy'])->name('polls.destroy');
+    Route::post('/polls/{poll}/vote', [PollController::class, 'vote'])->middleware('throttle:15,1')->name('polls.vote');
+    Route::post('/polls/{poll}/close', [PollController::class, 'close'])->name('polls.close');
 
     // Admin Only Routes
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
