@@ -55,6 +55,8 @@ class AiDraftGenerationTest extends TestCase
             'quota' => 100,
         ]);
 
+        Config::set('ai.provider', 'gemini');
+        Config::set('ai.base_url', 'https://generativelanguage.googleapis.com/v1beta');
         Config::set('ai.api_key', 'test-api-key-12345');
         Config::set('ai.mock', false);
     }

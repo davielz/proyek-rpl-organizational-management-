@@ -5,6 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Dashboard' }} - Campus Org System</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script>
+        window.toggleAiChatbot = window.toggleAiChatbot || function(forceState) {
+            const win = document.getElementById('ai-chatbot-window');
+            if (win) {
+                if (typeof forceState === 'boolean') {
+                    if (forceState) win.classList.remove('hidden');
+                    else win.classList.add('hidden');
+                } else {
+                    win.classList.toggle('hidden');
+                }
+            }
+        };
+    </script>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen antialiased flex flex-col">
     <!-- Navbar -->
@@ -81,6 +94,9 @@
 
         {{ $slot }}
     </main>
+
+    <!-- AI Chatbot Widget -->
+    <x-chatbot-widget />
 
     <!-- Footer -->
     <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">

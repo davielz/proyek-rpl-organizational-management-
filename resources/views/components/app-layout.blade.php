@@ -85,5 +85,8 @@
             </div>
         </footer>
     </div>
+
+    <!-- AI Chatbot Widget Component -->
+    <x-chatbot-widget />
 </body>
 </html>

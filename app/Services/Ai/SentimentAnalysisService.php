@@ -60,31 +60,66 @@ Kriteria Sentimen:
 - topics: maksimal 3 kata kunci topik utama yang dibahas (contoh: ["fasilitas", "pemateri", "waktu", "konsumsi"]).
 PROMPT;
 
-        try {
-            $endpointUrl = "{$baseUrl}/models/{$model}:generateContent?key={$apiKey}";
+        $provider = Config::get('ai.provider', 'nvidia');
 
-            $response = Http::timeout($timeout)->post($endpointUrl, [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $prompt],
+        try {
+            if ($provider === 'nvidia') {
+                $endpointUrl = "{$baseUrl}/chat/completions";
+
+                $response = Http::timeout($timeout)
+                    ->withHeaders([
+                        'Authorization' => 'Bearer ' . $apiKey,
+                        'Content-Type' => 'application/json',
+                    ])
+                    ->post($endpointUrl, [
+                        'model' => $model,
+                        'messages' => [
+                            [
+                                'role' => 'system',
+                                'content' => 'Anda adalah asisten AI analis sentimen ulasan kegiatan kampus. Respon HARUS berupa JSON murni.'
+                            ],
+                            [
+                                'role' => 'user',
+                                'content' => $prompt
+                            ]
+                        ],
+                        'temperature' => 0.2,
+                    ]);
+
+                if (! $response->successful()) {
+                    Log::warning('[Sentiment Service] AI API Error (HTTP '.$response->status().'). Menggunakan fallback analyzer.');
+
+                    return $this->fallbackRuleBasedAnalysis($comment, $rating, 'api_error_'.$response->status());
+                }
+
+                $responseData = $response->json();
+                $rawText = $responseData['choices'][0]['message']['content'] ?? null;
+            } else {
+                $endpointUrl = "{$baseUrl}/models/{$model}:generateContent?key={$apiKey}";
+
+                $response = Http::timeout($timeout)->post($endpointUrl, [
+                    'contents' => [
+                        [
+                            'parts' => [
+                                ['text' => $prompt],
+                            ],
                         ],
                     ],
-                ],
-                'generationConfig' => [
-                    'responseMimeType' => 'application/json',
-                    'temperature' => 0.2,
-                ],
-            ]);
+                    'generationConfig' => [
+                        'responseMimeType' => 'application/json',
+                        'temperature' => 0.2,
+                    ],
+                ]);
 
-            if (! $response->successful()) {
-                Log::warning('[Sentiment Service] AI API Error (HTTP '.$response->status().'). Menggunakan fallback analyzer.');
+                if (! $response->successful()) {
+                    Log::warning('[Sentiment Service] AI API Error (HTTP '.$response->status().'). Menggunakan fallback analyzer.');
 
-                return $this->fallbackRuleBasedAnalysis($comment, $rating, 'api_error_'.$response->status());
+                    return $this->fallbackRuleBasedAnalysis($comment, $rating, 'api_error_'.$response->status());
+                }
+
+                $responseData = $response->json();
+                $rawText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
             }
-
-            $responseData = $response->json();
-            $rawText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
             if (empty($rawText)) {
                 Log::warning('[Sentiment Service] AI API Respon Kosong. Menggunakan fallback analyzer.');

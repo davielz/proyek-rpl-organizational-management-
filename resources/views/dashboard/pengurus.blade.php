@@ -22,6 +22,8 @@
     </x-slot:header>
 
     <div class="space-y-6">
+        <!-- AI Chatbot Banner -->
+        <x-ai-chat-banner />
         <!-- Organization Banner -->
         <div class="p-4 bg-gradient-to-r from-amber-950/40 via-slate-900 to-indigo-950/30 border border-amber-500/20 rounded-2xl flex flex-wrap items-center justify-between gap-3">
             <div class="space-y-1">

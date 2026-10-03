@@ -54,44 +54,89 @@ class LlmAiService
             'timeout_seconds' => $timeout,
         ]);
 
+        $provider = config('ai.provider', 'nvidia');
+
         try {
-            $endpointUrl = "{$baseUrl}/models/{$model}:generateContent?key={$apiKey}";
+            if ($provider === 'nvidia') {
+                $endpointUrl = "{$baseUrl}/chat/completions";
 
-            $response = Http::timeout($timeout)
-                ->retry($retryTimes, $retrySleep, function (Throwable $exception) {
-                    Log::warning('[AI Integration] Retrying HTTP request due to exception: '.$exception->getMessage());
+                $response = Http::timeout($timeout)
+                    ->retry($retryTimes, $retrySleep, function (Throwable $exception) {
+                        Log::warning('[AI Integration] Retrying HTTP request due to exception: '.$exception->getMessage());
+                        return true;
+                    })
+                    ->withHeaders([
+                        'Authorization' => 'Bearer ' . $apiKey,
+                        'Content-Type' => 'application/json',
+                    ])
+                    ->post($endpointUrl, [
+                        'model' => $model,
+                        'messages' => [
+                            [
+                                'role' => 'system',
+                                'content' => 'Anda adalah asisten AI penyusun proposal/LPJ kampus. HANYA berikan respon dalam format JSON murni tanpa karakter tambahan di luar JSON.'
+                            ],
+                            [
+                                'role' => 'user',
+                                'content' => $prompt
+                            ]
+                        ],
+                        'temperature' => 0.7,
+                    ]);
 
-                    return true;
-                })
-                ->post($endpointUrl, [
-                    'contents' => [
-                        [
-                            'parts' => [
-                                ['text' => $prompt],
+                if (! $response->successful()) {
+                    Log::error('[AI Integration] LLM API merespon dengan status error', [
+                        'status_code' => $response->status(),
+                        'error_body' => $response->json() ?? $response->body(),
+                    ]);
+
+                    return [
+                        'success' => false,
+                        'data' => null,
+                        'error' => "LLM API Error (HTTP {$response->status()})",
+                    ];
+                }
+
+                $responseData = $response->json();
+                $rawText = $responseData['choices'][0]['message']['content'] ?? null;
+            } else {
+                $endpointUrl = "{$baseUrl}/models/{$model}:generateContent?key={$apiKey}";
+
+                $response = Http::timeout($timeout)
+                    ->retry($retryTimes, $retrySleep, function (Throwable $exception) {
+                        Log::warning('[AI Integration] Retrying HTTP request due to exception: '.$exception->getMessage());
+                        return true;
+                    })
+                    ->post($endpointUrl, [
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    ['text' => $prompt],
+                                ],
                             ],
                         ],
-                    ],
-                    'generationConfig' => [
-                        'responseMimeType' => 'application/json',
-                        'temperature' => 0.7,
-                    ],
-                ]);
+                        'generationConfig' => [
+                            'responseMimeType' => 'application/json',
+                            'temperature' => 0.7,
+                        ],
+                    ]);
 
-            if (! $response->successful()) {
-                Log::error('[AI Integration] LLM API merespon dengan status error', [
-                    'status_code' => $response->status(),
-                    'error_body' => $response->json() ?? $response->body(),
-                ]);
+                if (! $response->successful()) {
+                    Log::error('[AI Integration] LLM API merespon dengan status error', [
+                        'status_code' => $response->status(),
+                        'error_body' => $response->json() ?? $response->body(),
+                    ]);
 
-                return [
-                    'success' => false,
-                    'data' => null,
-                    'error' => "LLM API Error (HTTP {$response->status()})",
-                ];
+                    return [
+                        'success' => false,
+                        'data' => null,
+                        'error' => "LLM API Error (HTTP {$response->status()})",
+                    ];
+                }
+
+                $responseData = $response->json();
+                $rawText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
             }
-
-            $responseData = $response->json();
-            $rawText = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? null;
 
             if (empty($rawText)) {
                 Log::warning('[AI Integration] Respon LLM API kosong / tidak valid', [

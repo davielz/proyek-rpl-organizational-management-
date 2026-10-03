@@ -47,6 +47,8 @@ class FeedbackSentimentTest extends TestCase
             'status' => 'completed',
         ]);
 
+        Config::set('ai.provider', 'gemini');
+        Config::set('ai.base_url', 'https://generativelanguage.googleapis.com/v1beta');
         Config::set('ai.api_key', 'test-key-123');
         Config::set('ai.mock', false);
     }

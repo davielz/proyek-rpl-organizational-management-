@@ -15,6 +15,8 @@
     </x-slot:header>
 
     <div class="space-y-6">
+        <!-- AI Chatbot Banner -->
+        <x-ai-chat-banner />
         <!-- 1. Real Database Metric Cards Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <x-card class="p-4 bg-slate-900 border-slate-800">
