@@ -79,4 +79,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(EventFeedback::class);
     }
+
+    public function discussionPosts()
+    {
+        return $this->hasMany(DiscussionPost::class);
+    }
+
+    public function discussionComments()
+    {
+        return $this->hasMany(DiscussionComment::class);
+    }
 }

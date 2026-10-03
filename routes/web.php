@@ -5,6 +5,7 @@ use App\Http\Controllers\AiDraftController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatbotController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DiscussionController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\FeedbackController;
@@ -93,6 +94,18 @@ Route::middleware('auth')->group(function () {
     Route::delete('/polls/{poll}', [PollController::class, 'destroy'])->name('polls.destroy');
     Route::post('/polls/{poll}/vote', [PollController::class, 'vote'])->middleware('throttle:15,1')->name('polls.vote');
     Route::post('/polls/{poll}/close', [PollController::class, 'close'])->name('polls.close');
+
+    // Discussion Room Routes (All Authenticated Members)
+    Route::get('/discussions', [DiscussionController::class, 'index'])->name('discussions.index');
+    Route::get('/discussions/create', [DiscussionController::class, 'create'])->name('discussions.create');
+    Route::post('/discussions', [DiscussionController::class, 'store'])->name('discussions.store');
+    Route::get('/discussions/{discussion}', [DiscussionController::class, 'show'])->name('discussions.show');
+    Route::get('/discussions/{discussion}/edit', [DiscussionController::class, 'edit'])->name('discussions.edit');
+    Route::put('/discussions/{discussion}', [DiscussionController::class, 'update'])->name('discussions.update');
+    Route::delete('/discussions/{discussion}', [DiscussionController::class, 'destroy'])->name('discussions.destroy');
+    Route::post('/discussions/{discussion}/comments', [DiscussionController::class, 'storeComment'])->name('discussions.comments.store');
+    Route::put('/discussion-comments/{comment}', [DiscussionController::class, 'updateComment'])->name('discussion-comments.update');
+    Route::delete('/discussion-comments/{comment}', [DiscussionController::class, 'destroyComment'])->name('discussion-comments.destroy');
 
     // Admin Only Routes
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
