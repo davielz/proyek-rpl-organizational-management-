@@ -1,14 +1,26 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Dashboard' }} - Campus Org System</title>
+    <script>
+        (function() {
+            try {
+                const theme = localStorage.getItem('theme');
+                if (theme === 'light') {
+                    document.documentElement.classList.remove('dark');
+                } else if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch(e) {}
+        })();
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body
     x-data="{ sidebarOpen: false }"
-    class="bg-slate-950 text-slate-100 font-sans min-h-screen antialiased flex overflow-x-hidden"
+    class="bg-slate-50 dark:bg-[#080d19] text-slate-900 dark:text-slate-100 font-sans min-h-screen antialiased flex overflow-x-hidden transition-colors duration-200"
 >
     <!-- Desktop Sidebar (Fixed Left) -->
     <aside class="hidden md:flex shrink-0 h-screen sticky top-0 z-40">
@@ -79,7 +91,7 @@
         </main>
 
         <!-- Footer -->
-        <footer class="border-t border-slate-900 py-6 text-center text-xs text-slate-500 mt-auto">
+        <footer class="border-t border-slate-200 dark:border-slate-800 py-6 text-center text-xs text-slate-500 dark:text-slate-500 mt-auto">
             <div class="max-w-7xl mx-auto px-4">
                 &copy; {{ date('Y') }} Campus Organization Management System. All rights reserved.
             </div>

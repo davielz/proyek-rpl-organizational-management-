@@ -10,41 +10,41 @@
         <!-- Analytics Stat Cards Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <!-- Total Feedbacks -->
-            <x-card class="p-4 bg-slate-900/90 border-slate-800">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Total Ulasan</span>
+            <x-card class="p-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Ulasan</span>
                 <div class="mt-2 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-white">{{ $stats['total'] }}</span>
-                    <span class="text-xs text-slate-400">Feedback</span>
+                    <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ $stats['total'] }}</span>
+                    <span class="text-xs text-slate-500 dark:text-slate-400">Feedback</span>
                 </div>
             </x-card>
 
             <!-- Average Rating -->
-            <x-card class="p-4 bg-slate-900/90 border-amber-500/20">
-                <span class="text-xs font-semibold text-amber-400 uppercase tracking-wider block">Rata-Rata Rating</span>
+            <x-card class="p-4 border-amber-300 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-950/20">
+                <span class="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">Rata-Rata Rating</span>
                 <div class="mt-2 flex items-baseline justify-between">
                     <div class="flex items-center space-x-1">
-                        <span class="text-2xl font-bold text-amber-400">{{ $stats['avg_rating'] }}</span>
-                        <span class="text-xs text-amber-400/80">/ 5.0</span>
+                        <span class="text-2xl font-bold text-amber-500 dark:text-amber-400">{{ $stats['avg_rating'] }}</span>
+                        <span class="text-xs text-amber-600/80 dark:text-amber-400/80">/ 5.0</span>
                     </div>
-                    <span class="text-amber-400 text-sm">★</span>
+                    <span class="text-amber-500 dark:text-amber-400 text-sm">★</span>
                 </div>
             </x-card>
 
             <!-- Positive Sentiment -->
-            <x-card class="p-4 bg-emerald-950/30 border-emerald-500/30">
-                <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">Sentimen Positif</span>
+            <x-card class="p-4 bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-500/30">
+                <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Sentimen Positif</span>
                 <div class="mt-2 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-emerald-400">{{ $stats['positive_count'] }}</span>
-                    <span class="text-xs font-bold text-emerald-400">{{ $stats['positive_pct'] }}%</span>
+                    <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ $stats['positive_count'] }}</span>
+                    <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ $stats['positive_pct'] }}%</span>
                 </div>
             </x-card>
 
             <!-- Neutral Sentiment -->
-            <x-card class="p-4 bg-slate-900/90 border-slate-700">
-                <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider block">Sentimen Netral</span>
+            <x-card class="p-4">
+                <span class="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider block">Sentimen Netral</span>
                 <div class="mt-2 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-slate-200">{{ $stats['neutral_count'] }}</span>
-                    <span class="text-xs font-semibold text-slate-400">{{ $stats['neutral_pct'] }}%</span>
+                    <span class="text-2xl font-bold text-slate-700 dark:text-slate-200">{{ $stats['neutral_count'] }}</span>
+                    <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ $stats['neutral_pct'] }}%</span>
                 </div>
             </x-card>
 
@@ -138,25 +138,25 @@
                         </div>
 
                         <!-- Comment Content -->
-                        <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line">
+                        <div class="p-3 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-line">
                             {{ $fb->comment }}
                         </div>
 
                         <!-- AI Sentiment Analysis Result Footer -->
-                        <div class="pt-2 border-t border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+                        <div class="pt-2 border-t border-slate-100 dark:border-slate-800/60 flex flex-wrap items-center justify-between gap-2 text-[11px]">
                             <!-- Sentiment Badge -->
                             <div class="flex items-center space-x-2">
-                                <span class="text-slate-400 font-semibold">Sentimen AI:</span>
+                                <span class="text-slate-500 dark:text-slate-400 font-semibold">Sentimen AI:</span>
                                 @if($fb->sentiment === 'positive')
-                                    <span class="px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                    <span class="px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                         ✨ Positif ({{ round($fb->sentiment_score * 100) }}%)
                                     </span>
                                 @elseif($fb->sentiment === 'negative')
-                                    <span class="px-2.5 py-0.5 rounded-full font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                                    <span class="px-2.5 py-0.5 rounded-full font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                                         ⚠️ Negatif ({{ round($fb->sentiment_score * 100) }}%)
                                     </span>
                                 @else
-                                    <span class="px-2.5 py-0.5 rounded-full font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                                    <span class="px-2.5 py-0.5 rounded-full font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                                         💬 Netral ({{ round($fb->sentiment_score * 100) }}%)
                                     </span>
                                 @endif
@@ -166,7 +166,7 @@
                             @if(!empty($fb->topics))
                                 <div class="flex flex-wrap items-center gap-1">
                                     @foreach($fb->topics as $topic)
-                                        <span class="px-2 py-0.5 rounded-md bg-indigo-950/50 border border-indigo-500/20 text-indigo-300 font-medium">#{{ $topic }}</span>
+                                        <span class="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-medium">#{{ $topic }}</span>
                                     @endforeach
                                 </div>
                             @endif

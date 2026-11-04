@@ -79,39 +79,39 @@
             <!-- Workflow Visual Steps -->
             <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <!-- Step 1: Draft -->
-                <div class="p-3 rounded-xl border {{ in_array($document->status, ['draft', 'submitted', 'approved', 'revision_requested', 'rejected']) ? 'bg-slate-800/80 border-slate-700 text-white' : 'bg-slate-900 border-slate-800 text-slate-500' }}">
+                <div class="p-3 rounded-xl border {{ in_array($document->status, ['draft', 'submitted', 'approved', 'revision_requested', 'rejected']) ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500' }}">
                     <div class="flex items-center space-x-2">
-                        <span class="w-5 h-5 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center text-[10px] font-bold">1</span>
+                        <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[10px] font-bold">1</span>
                         <span class="font-semibold text-xs">1. Draf</span>
                     </div>
-                    <p class="text-[11px] text-slate-400 mt-1">Disusun oleh Pengurus</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Disusun oleh Pengurus</p>
                 </div>
 
                 <!-- Step 2: Submitted -->
-                <div class="p-3 rounded-xl border {{ in_array($document->status, ['submitted', 'approved', 'revision_requested', 'rejected']) ? 'bg-indigo-950/40 border-indigo-500/30 text-indigo-300' : 'bg-slate-900 border-slate-800 text-slate-500' }}">
+                <div class="p-3 rounded-xl border {{ in_array($document->status, ['submitted', 'approved', 'revision_requested', 'rejected']) ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500' }}">
                     <div class="flex items-center space-x-2">
-                        <span class="w-5 h-5 rounded-full {{ in_array($document->status, ['submitted', 'approved', 'revision_requested', 'rejected']) ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-500' }} flex items-center justify-center text-[10px] font-bold">2</span>
+                        <span class="w-5 h-5 rounded-full {{ in_array($document->status, ['submitted', 'approved', 'revision_requested', 'rejected']) ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500' }} flex items-center justify-center text-[10px] font-bold">2</span>
                         <span class="font-semibold text-xs">2. Diajukan</span>
                     </div>
-                    <p class="text-[11px] text-slate-400 mt-1">Menunggu Peninjauan Admin</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Menunggu Peninjauan Admin</p>
                 </div>
 
                 <!-- Step 3: Review / Revision -->
-                <div class="p-3 rounded-xl border {{ $document->status === 'revision_requested' ? 'bg-amber-950/40 border-amber-500/40 text-amber-300' : (in_array($document->status, ['approved']) ? 'bg-slate-800/80 border-slate-700 text-white' : 'bg-slate-900 border-slate-800 text-slate-500') }}">
+                <div class="p-3 rounded-xl border {{ $document->status === 'revision_requested' ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-500/40 text-amber-700 dark:text-amber-300' : (in_array($document->status, ['approved']) ? 'bg-slate-100 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500') }}">
                     <div class="flex items-center space-x-2">
-                        <span class="w-5 h-5 rounded-full {{ $document->status === 'revision_requested' ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-500' }} flex items-center justify-center text-[10px] font-bold">3</span>
+                        <span class="w-5 h-5 rounded-full {{ $document->status === 'revision_requested' ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500' }} flex items-center justify-center text-[10px] font-bold">3</span>
                         <span class="font-semibold text-xs">3. Peninjauan</span>
                     </div>
-                    <p class="text-[11px] text-slate-400 mt-1">{{ $document->status === 'revision_requested' ? 'Perlu Perbaikan Pengurus' : 'Evaluasi Dokumen' }}</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{{ $document->status === 'revision_requested' ? 'Perlu Perbaikan Pengurus' : 'Evaluasi Dokumen' }}</p>
                 </div>
 
                 <!-- Step 4: Approved / Final -->
-                <div class="p-3 rounded-xl border {{ $document->status === 'approved' ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300' : 'bg-slate-900 border-slate-800 text-slate-500' }}">
+                <div class="p-3 rounded-xl border {{ $document->status === 'approved' ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500' }}">
                     <div class="flex items-center space-x-2">
-                        <span class="w-5 h-5 rounded-full {{ $document->status === 'approved' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-800 text-slate-500' }} flex items-center justify-center text-[10px] font-bold">4</span>
+                        <span class="w-5 h-5 rounded-full {{ $document->status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500' }} flex items-center justify-center text-[10px] font-bold">4</span>
                         <span class="font-semibold text-xs">4. Disetujui</span>
                     </div>
-                    <p class="text-[11px] text-slate-400 mt-1">Dokumen Resmi & Final</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Dokumen Resmi & Final</p>
                 </div>
             </div>
         </x-card>

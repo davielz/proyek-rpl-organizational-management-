@@ -21,6 +21,7 @@ class DashboardController extends Controller
             $stats = [
                 'total_members' => User::where('role', 'anggota')->count(),
                 'total_users' => User::count(),
+                'pending_users_count' => User::where('status', 'pending')->count(),
                 'total_organizations' => Organization::count(),
                 'total_events' => Event::count(),
                 'pending_reviews_count' => Document::where('status', 'submitted')->count(),
@@ -71,6 +72,7 @@ class DashboardController extends Controller
                 'pending_documents' => Document::whereIn('event_id', $orgEventIds)->where('status', 'submitted')->count(),
                 'revision_documents' => Document::whereIn('event_id', $orgEventIds)->where('status', 'revision_requested')->count(),
                 'approved_documents' => Document::whereIn('event_id', $orgEventIds)->where('status', 'approved')->count(),
+                'pending_users_count' => User::where('status', 'pending')->count(),
                 'total_feedbacks' => $totalFeedbacks,
                 'avg_rating' => $totalFeedbacks > 0 ? round((clone $orgFeedbacksQuery)->avg('rating'), 1) : 0,
                 'positive_feedbacks' => (clone $orgFeedbacksQuery)->where('sentiment', 'positive')->count(),

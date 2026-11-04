@@ -19,52 +19,52 @@
         <x-ai-chat-banner />
         <!-- 1. Real Database Metric Cards Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <x-card class="p-4 bg-slate-900 border-slate-800">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Kegiatan Diikuti</span>
+            <x-card class="p-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Kegiatan Diikuti</span>
                 <div class="mt-2 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-white">{{ $stats['total_followed'] }}</span>
-                    <span class="text-[11px] text-slate-500">Pendaftaran</span>
+                    <span class="text-2xl font-bold text-slate-900 dark:text-white">{{ $stats['total_followed'] }}</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Pendaftaran</span>
                 </div>
             </x-card>
 
-            <x-card class="p-4 bg-slate-900 border-slate-800">
-                <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider block">Kehadiran Dikonfirmasi</span>
+            <x-card class="p-4">
+                <span class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Kehadiran Dikonfirmasi</span>
                 <div class="mt-2 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-emerald-400">{{ $stats['attended'] }}</span>
-                    <span class="text-[11px] text-slate-500">Hadir</span>
+                    <span class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ $stats['attended'] }}</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Hadir</span>
                 </div>
             </x-card>
 
-            <x-card class="p-4 bg-slate-900 border-slate-800">
-                <span class="text-xs font-semibold text-indigo-400 uppercase tracking-wider block">Status Terdaftar</span>
+            <x-card class="p-4">
+                <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Status Terdaftar</span>
                 <div class="mt-2 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-indigo-400">{{ $stats['registered'] }}</span>
-                    <span class="text-[11px] text-slate-500">Mendatang</span>
+                    <span class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{{ $stats['registered'] }}</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Mendatang</span>
                 </div>
             </x-card>
 
-            <x-card class="p-4 bg-slate-900 border-slate-800">
-                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block">Dibatalkan</span>
+            <x-card class="p-4">
+                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Dibatalkan</span>
                 <div class="mt-2 flex items-baseline justify-between">
-                    <span class="text-2xl font-bold text-slate-300">{{ $stats['cancelled'] }}</span>
-                    <span class="text-[11px] text-slate-500">Batal</span>
+                    <span class="text-2xl font-bold text-slate-600 dark:text-slate-300">{{ $stats['cancelled'] }}</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Batal</span>
                 </div>
             </x-card>
         </div>
 
         <!-- 2. Ulasan yang Belum Diberikan -->
         @if ($pendingFeedbackRegistrations->isNotEmpty())
-            <x-card class="border-indigo-500/30 bg-indigo-950/20">
+            <x-card class="border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/60 dark:bg-indigo-950/20">
                 <x-card.header title="Feedback & Ulasan Belum Diberikan" subtitle="Berikan masukan untuk kegiatan yang telah Anda ikuti">
                 </x-card.header>
-                <div class="divide-y divide-slate-800">
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
                     @foreach ($pendingFeedbackRegistrations as $reg)
                         <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="space-y-1">
-                                <a href="{{ route('events.show', $reg->event->slug) }}" class="font-bold text-sm text-white hover:text-indigo-400">
+                                <a href="{{ route('events.show', $reg->event->slug) }}" class="font-bold text-sm text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
                                     {{ $reg->event->title }}
                                 </a>
-                                <p class="text-xs text-slate-400">
+                                <p class="text-xs text-slate-500 dark:text-slate-400">
                                     {{ $reg->event->organization->name }} • {{ $reg->event->start_time->format('d M Y') }}
                                 </p>
                             </div>
@@ -85,7 +85,7 @@
             <x-card>
                 <x-card.header title="Kegiatan Yang Anda Ikuti">
                     <x-slot:action>
-                        <a href="{{ route('events.index') }}" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+                        <a href="{{ route('events.index') }}" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">
                             Cari Kegiatan &rarr;
                         </a>
                     </x-slot:action>
@@ -117,13 +117,13 @@
                                 <x-table.tr>
                                     <x-table.td>
                                         <div class="flex flex-col">
-                                            <a href="{{ route('events.show', $reg->event->slug) }}" class="font-bold text-white hover:text-indigo-400">
+                                            <a href="{{ route('events.show', $reg->event->slug) }}" class="font-bold text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400">
                                                 {{ $reg->event->title }}
                                             </a>
-                                            <span class="text-[11px] text-slate-400">{{ $reg->event->organization->name }}</span>
+                                            <span class="text-[11px] text-slate-500 dark:text-slate-400">{{ $reg->event->organization->name }}</span>
                                         </div>
                                     </x-table.td>
-                                    <x-table.td class="text-xs text-slate-400">
+                                    <x-table.td class="text-xs text-slate-500 dark:text-slate-400">
                                         {{ $reg->event->start_time->format('d M Y, H:i') }}
                                     </x-table.td>
                                     <x-table.td align="right">
@@ -140,7 +140,7 @@
             <x-card>
                 <x-card.header title="Katalog Kegiatan Mendatang">
                     <x-slot:action>
-                        <a href="{{ route('events.index') }}" class="text-xs font-semibold text-indigo-400 hover:text-indigo-300">
+                        <a href="{{ route('events.index') }}" class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-500">
                             Lihat Semua &rarr;
                         </a>
                     </x-slot:action>
@@ -153,14 +153,14 @@
                         />
                     </x-card.body>
                 @else
-                    <div class="divide-y divide-slate-800">
+                    <div class="divide-y divide-slate-100 dark:divide-slate-800">
                         @foreach ($upcomingEvents as $event)
-                            <div class="p-4 flex items-center justify-between gap-3 hover:bg-slate-850 transition-colors">
+                            <div class="p-4 flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                                 <div class="space-y-1 min-w-0">
-                                    <a href="{{ route('events.show', $event->slug) }}" class="font-bold text-sm text-white hover:text-indigo-400 truncate block">
+                                    <a href="{{ route('events.show', $event->slug) }}" class="font-bold text-sm text-slate-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 truncate block">
                                         {{ $event->title }}
                                     </a>
-                                    <div class="flex items-center space-x-2 text-xs text-slate-400">
+                                    <div class="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
                                         <span>{{ $event->organization->name }}</span>
                                         <span>•</span>
                                         <span>{{ $event->start_time->format('d M Y, H:i') }}</span>

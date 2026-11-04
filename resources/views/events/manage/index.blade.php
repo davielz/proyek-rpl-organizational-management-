@@ -71,28 +71,28 @@
                                 $registeredCount = $event->registrations->where('status', '!=', 'cancelled')->count();
                             @endphp
                             <x-table.tr>
-                                <x-table.td class="font-semibold text-white">
-                                    <a href="{{ route('events.show', $event->slug) }}" class="hover:text-indigo-400 transition-colors">
+                                <x-table.td class="font-semibold text-slate-900 dark:text-white">
+                                    <a href="{{ route('events.show', $event->slug) }}" class="hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                                         {{ $event->title }}
                                     </a>
-                                    <div class="text-xs text-slate-400 font-normal truncate max-w-xs">{{ $event->location }}</div>
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 font-normal truncate max-w-xs">{{ $event->location }}</div>
                                 </x-table.td>
                                 <x-table.td>
-                                    <span class="text-xs font-semibold text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
+                                    <span class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">
                                         {{ $event->organization->code ?? 'Org' }}
                                     </span>
                                 </x-table.td>
-                                <x-table.td class="text-xs text-slate-300">
+                                <x-table.td class="text-xs text-slate-600 dark:text-slate-300">
                                     {{ $event->start_time->format('d M Y, H:i') }}
                                 </x-table.td>
-                                <x-table.td class="text-xs">
-                                    <span class="font-semibold text-white">{{ $registeredCount }}</span> / {{ $event->quota > 0 ? $event->quota : '∞' }}
+                                <x-table.td class="text-xs text-slate-600 dark:text-slate-300">
+                                    <span class="font-semibold text-slate-900 dark:text-white">{{ $registeredCount }}</span> / {{ $event->quota > 0 ? $event->quota : '∞' }}
                                 </x-table.td>
                                 <x-table.td>
                                     <form action="{{ route('manage.events.update-status', $event->id) }}" method="POST" class="inline-block">
                                         @csrf
                                         @method('PUT')
-                                        <select name="status" onchange="this.form.submit()" class="bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 px-2 py-1 focus:border-indigo-500 outline-none">
+                                        <select name="status" onchange="this.form.submit()" class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-800 dark:text-slate-200 px-2 py-1 focus:border-indigo-500 outline-none">
                                             <option value="draft" @selected($event->status === 'draft')>Draft</option>
                                             <option value="pending" @selected($event->status === 'pending')>Pending</option>
                                             <option value="active" @selected($event->status === 'active')>Aktif</option>

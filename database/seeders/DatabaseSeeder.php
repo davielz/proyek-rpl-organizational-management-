@@ -28,6 +28,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'System Administrator',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
+                'status' => 'active',
                 'phone' => '081234567890',
             ]
         );
@@ -38,6 +39,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Budi Pratama (Pengurus HMTI)',
                 'password' => Hash::make('password'),
                 'role' => 'pengurus',
+                'status' => 'active',
                 'phone' => '081298765432',
             ]
         );
@@ -48,6 +50,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Siti Aminah',
                 'password' => Hash::make('password'),
                 'role' => 'anggota',
+                'status' => 'active',
                 'phone' => '081311112222',
             ]
         );
@@ -58,6 +61,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Rudi Hermawan',
                 'password' => Hash::make('password'),
                 'role' => 'anggota',
+                'status' => 'active',
                 'phone' => '081333334444',
             ]
         );
@@ -68,6 +72,7 @@ class DatabaseSeeder extends Seeder
                 'name' => 'Dewi Lestari',
                 'password' => Hash::make('password'),
                 'role' => 'anggota',
+                'status' => 'active',
                 'phone' => '081355556666',
             ]
         );

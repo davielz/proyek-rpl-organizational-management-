@@ -44,7 +44,7 @@ class AuthenticationAndRoleTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_new_users_can_register_as_anggota(): void
+    public function test_new_users_can_register_as_anggota_with_pending_status(): void
     {
         $response = $this->post('/register', [
             'name' => 'Budi Baru',
@@ -54,12 +54,14 @@ class AuthenticationAndRoleTest extends TestCase
             'password_confirmation' => 'password123',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertRedirect('/dashboard');
+        $this->assertGuest();
+        $response->assertRedirect('/login');
+        $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('users', [
             'email' => 'budibaru@campus.ac.id',
             'role' => 'anggota',
+            'status' => 'pending',
         ]);
     }
 
@@ -133,5 +135,127 @@ class AuthenticationAndRoleTest extends TestCase
             'id' => $admin->id,
             'role' => 'admin',
         ]);
+    }
+
+    public function test_pending_user_cannot_login(): void
+    {
+        $pendingUser = User::factory()->pending()->create([
+            'password' => Hash::make('password123'),
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => $pendingUser->email,
+            'password' => 'password123',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('email');
+    }
+
+    public function test_rejected_user_cannot_login(): void
+    {
+        $rejectedUser = User::factory()->rejected()->create([
+            'password' => Hash::make('password123'),
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => $rejectedUser->email,
+            'password' => 'password123',
+        ]);
+
+        $this->assertGuest();
+        $response->assertSessionHasErrors('email');
+    }
+
+    public function test_admin_and_pengurus_can_access_approvals_page(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $pengurus = User::factory()->pengurus()->create();
+
+        $responseAdmin = $this->actingAs($admin)->get('/manage/approvals');
+        $responseAdmin->assertStatus(200);
+
+        $responsePengurus = $this->actingAs($pengurus)->get('/manage/approvals');
+        $responsePengurus->assertStatus(200);
+    }
+
+    public function test_anggota_cannot_access_approvals_page(): void
+    {
+        $anggota = User::factory()->anggota()->create();
+
+        $response = $this->actingAs($anggota)->get('/manage/approvals');
+        $response->assertStatus(403);
+    }
+
+    public function test_admin_can_approve_pending_user(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $pendingUser = User::factory()->pending()->create();
+
+        $response = $this->actingAs($admin)->post("/manage/approvals/{$pendingUser->id}/approve");
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('users', [
+            'id' => $pendingUser->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_pengurus_can_approve_pending_user(): void
+    {
+        $pengurus = User::factory()->pengurus()->create();
+        $pendingUser = User::factory()->pending()->create();
+
+        $response = $this->actingAs($pengurus)->post("/manage/approvals/{$pendingUser->id}/approve");
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('users', [
+            'id' => $pendingUser->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_admin_and_pengurus_can_reject_pending_user(): void
+    {
+        $pengurus = User::factory()->pengurus()->create();
+        $pendingUser = User::factory()->pending()->create();
+
+        $response = $this->actingAs($pengurus)->post("/manage/approvals/{$pendingUser->id}/reject");
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('users', [
+            'id' => $pendingUser->id,
+            'status' => 'rejected',
+        ]);
+    }
+
+    public function test_approved_user_can_login_successfully(): void
+    {
+        $user = User::factory()->pending()->create([
+            'password' => Hash::make('password123'),
+        ]);
+
+        // First login fails because pending
+        $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+        $this->assertGuest();
+
+        // Admin approves user
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin)->post("/manage/approvals/{$user->id}/approve");
+
+        // Logout admin
+        $this->post('/logout');
+
+        // Now user can log in
+        $response = $this->post('/login', [
+            'email' => $user->email,
+            'password' => 'password123',
+        ]);
+
+        $this->assertAuthenticatedAs($user);
+        $response->assertRedirect('/dashboard');
     }
 }

@@ -1,9 +1,296 @@
 @import 'tailwindcss';
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+html.theme-transition,
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
+    transition: background-color 0.25s ease, border-color 0.25s ease, color 0.15s ease !important;
+}
+
+/* ============================================================
+   DARK MODE — Deep, distinct color overrides
+   Light mode uses slate-50/white, dark mode uses deep navy/charcoal
+   ============================================================ */
+
+/* Page body background — darkest layer */
+.dark body {
+    background-color: #080d19 !important;
+    color: #e2e8f0 !important;
+}
+
+/* Sidebar & card surfaces — slightly elevated */
+.dark .dark\:bg-slate-900,
+.dark [class*="dark:bg-slate-900"] {
+    background-color: #0f172a !important;
+}
+
+/* Table headers, nested panels — mid layer */
+.dark .dark\:bg-slate-950,
+.dark [class*="dark:bg-slate-950"],
+.dark .dark\:bg-slate-950\/60,
+.dark .dark\:bg-slate-950\/80 {
+    background-color: #06091a !important;
+}
+
+/* Table header bg */
+.dark .dark\:bg-slate-950\/80 {
+    background-color: #080c1e !important;
+}
+
+/* Main page background override */
+.dark .dark\:bg-slate-950 {
+    background-color: #080d19 !important;
+}
+
+/* ============================================================
+   GLOBAL DARK LAYER SYSTEM — using CSS custom properties
+   ============================================================ */
+:root {
+    --bg-page: #f8fafc;        /* slate-50 */
+    --bg-surface: #ffffff;     /* white */
+    --bg-elevated: #f1f5f9;    /* slate-100 */
+    --bg-subtle: #f8fafc;      /* slate-50 */
+    --border: #e2e8f0;         /* slate-200 */
+    --border-muted: #cbd5e1;   /* slate-300 */
+    --text-primary: #0f172a;   /* slate-900 */
+    --text-secondary: #475569; /* slate-600 */
+    --text-muted: #94a3b8;     /* slate-400 */
+}
+
+.dark {
+    --bg-page: #080d19;        /* near-black navy */
+    --bg-surface: #0f172a;     /* deep navy — cards */
+    --bg-elevated: #162033;    /* slightly lighter — hover surfaces */
+    --bg-subtle: #06091a;      /* darkest — table headers, nested */
+    --border: #1e293b;         /* slate-800 */
+    --border-muted: #334155;   /* slate-700 */
+    --text-primary: #f1f5f9;   /* slate-100 */
+    --text-secondary: #94a3b8; /* slate-400 */
+    --text-muted: #64748b;     /* slate-500 */
+}
+
+/* Apply the CSS variable system to core elements */
+.dark body {
+    background-color: var(--bg-page) !important;
+    color: var(--text-primary) !important;
+}
+
+/* Surfaces (cards, sidebar, modals, dropdowns, etc.) */
+.dark .dark\:bg-slate-900 {
+    background-color: var(--bg-surface) !important;
+}
+
+/* Page bg and very dark surfaces */
+.dark .dark\:bg-slate-950 {
+    background-color: var(--bg-page) !important;
+}
+
+/* ============================================================
+   SIDEBAR — explicit dark treatment
+   ============================================================ */
+.dark aside > div,
+.dark [class*="bg-white dark:bg-slate-900"] {
+    background-color: var(--bg-surface) !important;
+}
+
+/* ============================================================
+   TOP NAV — glassmorphism on dark
+   ============================================================ */
+.dark header.sticky {
+    background-color: rgba(15, 23, 42, 0.88) !important;
+    backdrop-filter: blur(12px);
+    border-bottom-color: var(--border) !important;
+}
+
+/* ============================================================
+   CARDS — strong elevation contrast in dark mode
+   ============================================================ */
+.dark [class*="bg-white"],
+.dark .bg-white {
+    background-color: var(--bg-surface) !important;
+}
+
+/* ============================================================
+   TABLE HEADERS & ROWS
+   ============================================================ */
+.dark thead th,
+.dark .dark\:bg-slate-950\/80 {
+    background-color: var(--bg-subtle) !important;
+}
+
+.dark tbody tr:hover td {
+    background-color: var(--bg-elevated) !important;
+}
+
+/* ============================================================
+   INPUTS / FORM CONTROLS — dark background with light text
+   ============================================================ */
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+.dark select,
+.dark textarea {
+    background-color: #162033 !important;
+    border-color: #1e293b !important;
+    color: #f1f5f9 !important;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):focus,
+.dark select:focus,
+.dark textarea:focus {
+    background-color: #1a2840 !important;
+    border-color: #6366f1 !important;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+    color: #475569 !important;
+}
+
+/* ============================================================
+   MODALS — distinct dark background
+   ============================================================ */
+.dark [role="dialog"] > div,
+.dark .modal-content {
+    background-color: var(--bg-surface) !important;
+    border-color: var(--border) !important;
+}
+
+/* ============================================================
+   BORDERS — visually distinct in dark mode
+   ============================================================ */
+.dark .dark\:border-slate-800 {
+    border-color: var(--border) !important;
+}
+
+.dark .dark\:border-slate-700 {
+    border-color: var(--border-muted) !important;
+}
+
+/* ============================================================
+   TEXT COLORS — ensure readability in dark mode
+   ============================================================ */
+.dark .dark\:text-white {
+    color: #f8fafc !important;
+}
+
+.dark .dark\:text-slate-100 {
+    color: #f1f5f9 !important;
+}
+
+.dark .dark\:text-slate-200 {
+    color: #e2e8f0 !important;
+}
+
+.dark .dark\:text-slate-300 {
+    color: #cbd5e1 !important;
+}
+
+.dark .dark\:text-slate-400 {
+    color: #94a3b8 !important;
+}
+
+/* ============================================================
+   HOVER STATES — elevated surface in dark
+   ============================================================ */
+.dark .dark\:hover\:bg-slate-800\/60:hover,
+.dark .dark\:hover\:bg-slate-800\/80:hover,
+.dark [class*="dark:hover:bg-slate-800"]:hover {
+    background-color: var(--bg-elevated) !important;
+}
+
+/* ============================================================
+   CHATBOT WIDGET — dark mode deep background
+   ============================================================ */
+.dark #ai-chatbot-window {
+    background-color: #0a1020 !important;
+    border-color: #1e293b !important;
+}
+
+.dark #ai-chatbot-window header {
+    background-color: #0f172a !important;
+    border-bottom-color: #1e293b !important;
+}
+
+.dark #ai-chatbot-messages {
+    background-color: #0a1020 !important;
+}
+
+.dark #ai-chatbot-input-form {
+    background-color: #0f172a !important;
+    border-top-color: #1e293b !important;
+}
+
+/* ============================================================
+   NOTIFICATION / ALERT BANDS
+   ============================================================ */
+.dark .dark\:bg-slate-800 {
+    background-color: var(--bg-elevated) !important;
+}
+
+/* ============================================================
+   SCROLLBAR — dark mode style
+   ============================================================ */
+.dark ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.dark ::-webkit-scrollbar-track {
+    background: #06091a;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 999px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+}
+
+/* ============================================================
+   DIVIDERS — make them visible in dark mode
+   ============================================================ */
+.dark .dark\:divide-slate-800 > * + * {
+    border-top-color: var(--border) !important;
+}
+
+/* ============================================================
+   BADGES / PILL BUTTONS with low-opacity backgrounds
+   ============================================================ */
+.dark .dark\:bg-indigo-600\/10 {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+}
+
+.dark .dark\:bg-rose-500\/10 {
+    background-color: rgba(244, 63, 94, 0.15) !important;
+}
+
+.dark .dark\:bg-amber-500\/10 {
+    background-color: rgba(245, 158, 11, 0.15) !important;
+}
+
+.dark .dark\:bg-emerald-500\/10 {
+    background-color: rgba(16, 185, 129, 0.15) !important;
+}
+
+/* ============================================================
+   FOOTER — dark mode
+   ============================================================ */
+.dark footer {
+    border-top-color: var(--border) !important;
+    background-color: transparent !important;
 }

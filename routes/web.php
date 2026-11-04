@@ -12,6 +12,7 @@ use App\Http\Controllers\FeedbackController;
 use App\Http\Controllers\ManageEventController;
 use App\Http\Controllers\PollController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserApprovalController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +23,13 @@ Route::get('/', function () {
 
     return redirect()->route('login');
 });
+
+// Telegram Bot Webhook Route
+Route::post('/telegram/webhook', function (\Illuminate\Http\Request $request, \App\Services\TelegramNotificationService $telegramService) {
+    $update = $request->all();
+    $telegramService->processTelegramUpdate($update);
+    return response()->json(['ok' => true]);
+})->name('telegram.webhook');
 
 // Guest Routes
 Route::middleware('guest')->group(function () {
@@ -61,6 +69,11 @@ Route::middleware('auth')->group(function () {
         Route::put('/events/{event}', [ManageEventController::class, 'update'])->name('events.update');
         Route::delete('/events/{event}', [ManageEventController::class, 'destroy'])->name('events.destroy');
         Route::put('/events/{event}/status', [ManageEventController::class, 'updateStatus'])->name('events.update-status');
+
+        // Account Approvals (Admin & Pengurus)
+        Route::get('/approvals', [UserApprovalController::class, 'index'])->name('approvals.index');
+        Route::post('/approvals/{user}/approve', [UserApprovalController::class, 'approve'])->name('approvals.approve');
+        Route::post('/approvals/{user}/reject', [UserApprovalController::class, 'reject'])->name('approvals.reject');
     });
 
     // Proposal & LPJ Document Routes (Admin & Pengurus)
@@ -111,5 +124,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/users', [AdminUserController::class, 'index'])->name('users.index');
         Route::put('/users/{user}/role', [AdminUserController::class, 'updateRole'])->name('users.update-role');
+        Route::post('/users/{user}/approve', [AdminUserController::class, 'approve'])->name('users.approve');
+        Route::post('/users/{user}/reject', [AdminUserController::class, 'reject'])->name('users.reject');
     });
 });

@@ -1,16 +1,16 @@
-<div class="p-5 bg-gradient-to-r from-indigo-950/80 via-slate-900 to-purple-950/70 border border-indigo-500/30 rounded-2xl shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+<div class="p-5 bg-gradient-to-r from-indigo-50/90 via-white to-purple-50/90 dark:from-indigo-950/80 dark:via-slate-900 dark:to-purple-950/70 border border-indigo-200 dark:border-indigo-500/30 rounded-2xl shadow-sm dark:shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 transition-colors duration-200">
     <div class="flex items-start space-x-3.5">
         <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-extrabold text-base shadow-lg shadow-indigo-500/30 shrink-0 border border-indigo-400/40">
             ✨ AI
         </div>
         <div class="space-y-1">
             <div class="flex items-center space-x-2">
-                <h3 class="text-base font-bold text-white tracking-tight">Asisten AI Kampus</h3>
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
+                <h3 class="text-base font-bold text-slate-900 dark:text-white tracking-tight">Asisten AI Kampus</h3>
+                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">
                     NVIDIA Llama 3.2
                 </span>
             </div>
-            <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            <p class="text-xs text-slate-600 dark:text-slate-300 max-w-2xl leading-relaxed">
                 Butuh bantuan menyusun proposal kegiatan, ide acara organisasi, atau informasi seputar sistem? Tanyakan langsung ke Asisten AI sekarang.
             </p>
         </div>

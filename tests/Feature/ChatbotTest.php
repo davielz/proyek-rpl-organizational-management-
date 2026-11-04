@@ -60,4 +60,31 @@ class ChatbotTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['message']);
     }
+
+    public function test_chatbot_service_returns_rejection_for_out_of_context_request(): void
+    {
+        $user = User::factory()->create();
+
+        $this->mock(NvidiaChatService::class, function ($mock) {
+            $mock->shouldReceive('chat')
+                ->once()
+                ->with('Buatkan coding python yang menuliskan nama anda', \Mockery::any(), \Mockery::any(), \Mockery::any())
+                ->andReturn([
+                    'success' => true,
+                    'reply' => 'Maaf, saya adalah Asisten AI yang khusus bertugas membantu pengelolaan sistem organisasi mahasiswa di aplikasi ini. Saya tidak dapat membantu permintaan di luar konteks sistem aplikasi ini.',
+                    'error' => null,
+                ]);
+        });
+
+        $response = $this->actingAs($user)->postJson('/dashboard/chat', [
+            'message' => 'Buatkan coding python yang menuliskan nama anda',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'reply' => 'Maaf, saya adalah Asisten AI yang khusus bertugas membantu pengelolaan sistem organisasi mahasiswa di aplikasi ini. Saya tidak dapat membantu permintaan di luar konteks sistem aplikasi ini.',
+                'error' => null,
+            ]);
+    }
 }
