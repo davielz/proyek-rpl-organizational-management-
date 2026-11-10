@@ -13,6 +13,8 @@ use App\Http\Controllers\ManageEventController;
 use App\Http\Controllers\PollController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserApprovalController;
+use App\Services\TelegramNotificationService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -25,9 +27,10 @@ Route::get('/', function () {
 });
 
 // Telegram Bot Webhook Route
-Route::post('/telegram/webhook', function (\Illuminate\Http\Request $request, \App\Services\TelegramNotificationService $telegramService) {
+Route::post('/telegram/webhook', function (Request $request, TelegramNotificationService $telegramService) {
     $update = $request->all();
     $telegramService->processTelegramUpdate($update);
+
     return response()->json(['ok' => true]);
 })->name('telegram.webhook');
 
@@ -48,6 +51,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/chat', [ChatbotController::class, 'send'])->middleware('throttle:30,1')->name('dashboard.chat');
+    Route::get('/dashboard/chat/history', [ChatbotController::class, 'history'])->name('dashboard.chat.history');
+    Route::delete('/dashboard/chat', [ChatbotController::class, 'clear'])->name('dashboard.chat.clear');
+    Route::post('/dashboard/chat/clear', [ChatbotController::class, 'clear'])->name('dashboard.chat.clear.post');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');

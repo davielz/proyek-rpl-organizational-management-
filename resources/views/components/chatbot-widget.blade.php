@@ -1,24 +1,44 @@
+@php
+    $currentUser = auth()->user();
+    $initialAiMessages = $currentUser
+        ? \App\Models\AiChatMessage::where('user_id', $currentUser->id)
+            ->latest('created_at')
+            ->take(50)
+            ->get()
+            ->reverse()
+            ->values()
+            ->map(fn($m) => [
+                'role' => $m->role,
+                'content' => $m->content
+            ])
+        : collect();
+@endphp
+
 <script>
-// Global AI Chatbot Controller (Declared first so it is available to any button on the page)
-const aiCurrentUserId = @json(auth()->id() ? (string) auth()->id() : 'guest');
-const aiChatStorageKey = 'campus_ai_chat_history_user_' + aiCurrentUserId;
-
-window.aiChatState = {
-    userId: aiCurrentUserId,
-    messages: [],
-    isLoading: false
-};
-
-// Restore chat history from sessionStorage (strictly scoped by current user account)
+// Clean any legacy cross-account client-side storage from previous versions
 try {
-    // Remove any legacy unscoped storage
+    localStorage.removeItem('campus_ai_chat_history');
     sessionStorage.removeItem('campus_ai_chat_history');
-
-    const saved = sessionStorage.getItem(aiChatStorageKey);
-    if (saved) {
-        window.aiChatState.messages = JSON.parse(saved) || [];
+    for (let i = sessionStorage.length - 1; i >= 0; i--) {
+        const k = sessionStorage.key(i);
+        if (k && k.startsWith('campus_ai_chat_history')) {
+            sessionStorage.removeItem(k);
+        }
+    }
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('campus_ai_chat_history')) {
+            localStorage.removeItem(k);
+        }
     }
 } catch(e) {}
+
+// Global AI Assistant State (Strictly scoped to current authenticated user's database messages)
+window.aiChatState = {
+    userId: @json(auth()->id()),
+    messages: @json($initialAiMessages),
+    isLoading: false
+};
 
 window.toggleAiChatbot = function(forceState) {
     const win = document.getElementById('ai-chatbot-window');
@@ -42,11 +62,28 @@ window.toggleAiChatbot = function(forceState) {
     }
 };
 
-window.clearAiChatMessages = function() {
-    window.aiChatState.messages = [];
+window.clearAiChatMessages = async function() {
+    if (!confirm('Apakah Anda yakin ingin menghapus seluruh riwayat percakapan AI Assistant Anda?')) {
+        return;
+    }
+
     try {
-        sessionStorage.removeItem(aiChatStorageKey);
-    } catch(e) {}
+        const clearUrl = @json(route('dashboard.chat.clear'));
+        const csrf = @json(csrf_token());
+
+        await fetch(clearUrl, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': csrf,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        });
+    } catch(err) {
+        console.warn('[AI Assistant] Clear error:', err);
+    }
+
+    window.aiChatState.messages = [];
     window.renderAiMessages();
 };
 
@@ -67,7 +104,7 @@ window.submitAiChatMessage = async function(e) {
     const text = input ? input.value.trim() : '';
     if (!text) return;
 
-    // Push user message
+    // Push user message to UI state immediately
     window.aiChatState.messages.push({ role: 'user', content: text });
     if (input) input.value = '';
     window.renderAiMessages();
@@ -76,11 +113,6 @@ window.submitAiChatMessage = async function(e) {
     window.setAiLoading(true);
 
     try {
-        const history = window.aiChatState.messages.slice(0, -1).map(m => ({
-            role: m.role,
-            content: m.content
-        }));
-
         const endpoint = @json(route('dashboard.chat'));
         const csrfToken = @json(csrf_token());
 
@@ -92,28 +124,27 @@ window.submitAiChatMessage = async function(e) {
                 'Accept': 'application/json',
             },
             body: JSON.stringify({
-                message: text,
-                history: history
+                message: text
             })
         });
 
         const data = await response.json();
+
         if (data.success && data.reply) {
             window.aiChatState.messages.push({ role: 'assistant', content: data.reply });
         } else {
             window.aiChatState.messages.push({
                 role: 'assistant',
-                content: data.reply || 'Maaf, server NVIDIA AI sedang mengalami antrean tinggi. Silakan coba beberapa saat lagi.'
+                content: data.reply || 'Maaf, AI Assistant sedang mengalami antrean pemrosesan data. Silakan coba beberapa saat lagi.'
             });
         }
     } catch(err) {
         window.aiChatState.messages.push({
             role: 'assistant',
-            content: 'Maaf, terjadi kendala saat menghubungi server. Silakan coba kirim kembali beberapa saat lagi.'
+            content: 'Maaf, terjadi kendala koneksi saat menghubungi server AI Assistant. Silakan coba kirim kembali beberapa saat lagi.'
         });
     } finally {
         window.setAiLoading(false);
-        try { sessionStorage.setItem(aiChatStorageKey, JSON.stringify(window.aiChatState.messages)); } catch(e) {}
         window.renderAiMessages();
         window.scrollAiChatToBottom();
     }
@@ -131,17 +162,17 @@ window.setAiLoading = function(loading) {
     if (loader) {
         if (loading) {
             loader.classList.remove('hidden');
-            if (loadingText) loadingText.textContent = 'Membaca database & menghubungi AI...';
+            if (loadingText) loadingText.textContent = 'Membaca database & merumuskan jawaban...';
 
             let seconds = 0;
             if (aiLoadingInterval) clearInterval(aiLoadingInterval);
             aiLoadingInterval = setInterval(() => {
                 seconds += 1;
                 if (!loadingText) return;
-                if (seconds >= 6 && seconds < 15) {
-                    loadingText.textContent = 'AI sedang merumuskan jawaban...';
-                } else if (seconds >= 15) {
-                    loadingText.textContent = 'Menunggu antrean cloud NVIDIA AI...';
+                if (seconds >= 4 && seconds < 10) {
+                    loadingText.textContent = 'AI Assistant sedang menganalisis data sistem...';
+                } else if (seconds >= 10) {
+                    loadingText.textContent = 'Sedang menyusun respon lengkap untuk Anda...';
                 }
             }, 1000);
         } else {
@@ -167,9 +198,9 @@ window.renderAiMessages = function() {
 
         const bubble = document.createElement('div');
         if (msg.role === 'user') {
-            bubble.className = 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl rounded-tr-none px-3.5 py-2 text-xs max-w-[85%] shadow-md';
+            bubble.className = 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl rounded-tr-none px-3.5 py-2 text-xs max-w-[85%] shadow-md leading-relaxed';
         } else {
-            bubble.className = 'bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs max-w-[88%] space-y-1 shadow-sm dark:shadow-md';
+            bubble.className = 'bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs max-w-[88%] space-y-1 shadow-sm dark:shadow-md leading-relaxed';
         }
 
         bubble.innerHTML = window.formatAiMarkdownText(msg.content);
@@ -195,7 +226,7 @@ window.formatAiMarkdownText = function(text) {
     return html;
 };
 
-// Initial render if DOM is ready
+// Initial render once DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => window.renderAiMessages());
 } else {
@@ -210,7 +241,7 @@ if (document.readyState === 'loading') {
         onclick="window.toggleAiChatbot()"
         type="button"
         class="fixed bottom-6 right-6 z-[9999] flex items-center space-x-2.5 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 hover:from-indigo-500 hover:to-purple-500 text-white px-4 py-3 rounded-full shadow-2xl shadow-indigo-600/50 hover:scale-105 active:scale-95 transition-all duration-200 group border border-indigo-400/40 cursor-pointer"
-        title="Buka Asisten AI Kampus"
+        title="Buka AI Assistant"
     >
         <div class="relative flex items-center justify-center">
             <svg class="w-6 h-6 transform group-hover:rotate-12 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,14 +268,17 @@ if (document.readyState === 'loading') {
                 </div>
                 <div>
                     <div class="flex items-center space-x-1.5">
-                        <h3 class="font-bold text-sm text-slate-900 dark:text-white leading-none">Asisten AI Kampus</h3>
-                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">NVIDIA</span>
+                        <h3 class="font-bold text-sm text-slate-900 dark:text-white leading-none">AI Assistant</h3>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Online
+                        </span>
                     </div>
-                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Bertenaga Llama 3.2 (NVIDIA AI)</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Asisten Cerdas Sistem Organisasi</p>
                 </div>
             </div>
             <div class="flex items-center space-x-1">
-                <button onclick="window.clearAiChatMessages()" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-xs transition-colors cursor-pointer" title="Bersihkan Chat">
+                <button onclick="window.clearAiChatMessages()" class="text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-xs transition-colors cursor-pointer" title="Bersihkan Obrolan Saya">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 </button>
                 <button onclick="window.toggleAiChatbot(false)" class="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer" title="Tutup">
@@ -258,9 +292,9 @@ if (document.readyState === 'loading') {
             <!-- Welcome Card -->
             <div class="p-3 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2" id="ai-chatbot-welcome">
                 <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                    👋 Halo <strong>{{ auth()->user()->name ?? 'Mahasiswa' }}</strong>! Saya <strong>Asisten AI Kampus</strong>. Saya terhubung langsung ke database aplikasi untuk memberikan informasi kegiatan, polling, diskusi, dokumen, dan statistik secara akurat.
+                    👋 Halo <strong>{{ auth()->user()->name ?? 'Mahasiswa' }}</strong>! Saya <strong>AI Assistant</strong>. Saya siap membantu Anda memberikan informasi kegiatan, polling, ruang diskusi, dokumen organisasi, dan data statistik kampus secara akurat.
                 </p>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold pt-1">Tanyakan Data Sistem:</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold pt-1">Rekomendasi Pertanyaan:</div>
                 <div class="flex flex-wrap gap-1.5">
                     <button onclick="window.sendAiQuickPrompt('Kegiatan apa saja yang sedang dibuka pendaftarannya?')" class="text-[11px] bg-white hover:bg-indigo-50 dark:bg-slate-800 dark:hover:bg-indigo-600/30 text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 dark:hover:text-indigo-200 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors text-left cursor-pointer shadow-sm">
                         📅 Kegiatan dibuka
@@ -283,7 +317,7 @@ if (document.readyState === 'loading') {
             <!-- Loading Indicator -->
             <div id="ai-chatbot-loading" class="hidden flex justify-start">
                 <div class="bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 rounded-2xl rounded-tl-none px-4 py-2.5 text-xs flex items-center space-x-2 shadow-sm">
-                    <span id="ai-chatbot-loading-text" class="font-medium text-indigo-600 dark:text-indigo-300">Membaca database & menghubungi AI...</span>
+                    <span id="ai-chatbot-loading-text" class="font-medium text-indigo-600 dark:text-indigo-300">Membaca database & merumuskan jawaban...</span>
                     <span class="flex space-x-1">
                         <span class="w-1.5 h-1.5 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce"></span>
                         <span class="w-1.5 h-1.5 bg-indigo-500 dark:bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
@@ -298,7 +332,7 @@ if (document.readyState === 'loading') {
             <input
                 id="ai-chatbot-input"
                 type="text"
-                placeholder="Tanyakan ke NVIDIA AI..."
+                placeholder="Tanyakan ke AI Assistant..."
                 class="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition-all"
             />
             <button

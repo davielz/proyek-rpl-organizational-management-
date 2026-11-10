@@ -105,8 +105,8 @@ class ChatbotFallbackTest extends TestCase
         );
 
         $this->assertTrue($result['success']);
-        $this->assertStringContainsString('Maaf, saya adalah Asisten AI yang khusus bertugas membantu pengelolaan sistem organisasi mahasiswa di aplikasi ini', $result['reply']);
-        $this->assertStringContainsString('Saya tidak dapat membantu permintaan di luar konteks sistem aplikasi ini', $result['reply']);
+        $this->assertStringContainsString('Maaf, saya adalah AI Assistant yang khusus bertugas membantu pengelolaan sistem organisasi mahasiswa di aplikasi ini', $result['reply']);
+        $this->assertStringContainsString('Saya tidak dapat melayani permintaan di luar konteks sistem ini', $result['reply']);
     }
 
     public function test_chatbot_fallback_protects_internal_proposals_from_anggota(): void

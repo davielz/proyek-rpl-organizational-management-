@@ -62,7 +62,7 @@ class User extends Authenticatable
 
     public function hasTelegram(): bool
     {
-        return !empty($this->telegram_chat_id);
+        return ! empty($this->telegram_chat_id);
     }
 
     public function scopeActive($query)
@@ -123,5 +123,10 @@ class User extends Authenticatable
     public function discussionComments()
     {
         return $this->hasMany(DiscussionComment::class);
+    }
+
+    public function aiChatMessages()
+    {
+        return $this->hasMany(AiChatMessage::class);
     }
 }
