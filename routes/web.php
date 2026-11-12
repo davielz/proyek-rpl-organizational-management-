@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminAiConfigurationController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\AiDraftController;
 use App\Http\Controllers\AuthController;
@@ -132,5 +133,13 @@ Route::middleware('auth')->group(function () {
         Route::put('/users/{user}/role', [AdminUserController::class, 'updateRole'])->name('users.update-role');
         Route::post('/users/{user}/approve', [AdminUserController::class, 'approve'])->name('users.approve');
         Route::post('/users/{user}/reject', [AdminUserController::class, 'reject'])->name('users.reject');
+
+        // AI Assistant Configurations
+        Route::get('/ai-configurations', [AdminAiConfigurationController::class, 'index'])->name('ai.index');
+        Route::post('/ai-configurations', [AdminAiConfigurationController::class, 'store'])->name('ai.store');
+        Route::put('/ai-configurations/{config}', [AdminAiConfigurationController::class, 'update'])->name('ai.update');
+        Route::post('/ai-configurations/{config}/activate', [AdminAiConfigurationController::class, 'activate'])->name('ai.activate');
+        Route::delete('/ai-configurations/{config}', [AdminAiConfigurationController::class, 'destroy'])->name('ai.destroy');
+        Route::post('/ai-configurations/{config}/test', [AdminAiConfigurationController::class, 'test'])->name('ai.test');
     });
 });

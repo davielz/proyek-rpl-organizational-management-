@@ -2,6 +2,7 @@
 
 namespace App\Services\Ai;
 
+use App\Models\AiConfiguration;
 use App\Models\DiscussionPost;
 use App\Models\Document;
 use App\Models\Event;
@@ -23,7 +24,7 @@ class NvidiaChatService
     }
 
     /**
-     * Send user message to NVIDIA AI API (OpenAI compatible endpoint) for AI Assistant.
+     * Send user message to configured AI Provider (Nvidia, Gemini, OpenAI, or Custom).
      *
      * @param  array  $history  Array of previous messages [['role' => 'user'|'assistant', 'content' => string]]
      * @return array{success: bool, reply: string, error: string|null}
@@ -55,22 +56,41 @@ class NvidiaChatService
             ];
         }
 
-        $apiKey = config('ai.api_key');
-        if ($apiKey === null) {
-            $apiKey = env('NVIDIA_API_KEY');
+        // 3. Load dynamic active configuration from database or config/ai.php
+        $activeConfig = null;
+        try {
+            $activeConfig = AiConfiguration::getActive();
+        } catch (Throwable) {
+            // Table might not be ready in early lifecycle
         }
-        $baseUrl = rtrim(config('ai.base_url', 'https://integrate.api.nvidia.com/v1'), '/');
-        $rawModel = config('ai.model', 'nvidia/nemotron-3.5-bolt-e4b');
-        $model = preg_replace('/^nvidia\/nvidia\//', 'nvidia/', trim($rawModel));
-        $timeout = (int) config('ai.timeout', 60);
-        $maxTokens = (int) config('ai.max_tokens', 1000);
+
+        $provider = strtolower($activeConfig->provider ?? config('ai.provider', 'nvidia'));
+        $apiKey = $activeConfig->api_key ?? config('ai.api_key');
+        if ($apiKey === null) {
+            $apiKey = match ($provider) {
+                'gemini' => env('GEMINI_API_KEY', config('ai.api_key')),
+                default => env('NVIDIA_API_KEY', config('ai.api_key')),
+            };
+        }
+
+        // Allow test suites to force mock/fallback by setting config(['ai.api_key' => ''])
+        if (config('ai.api_key') === '') {
+            $apiKey = '';
+        }
+
+        $baseUrl = rtrim($activeConfig->base_url ?? config('ai.base_url', 'https://integrate.api.nvidia.com/v1'), '/');
+        $rawModel = $activeConfig->model ?? config('ai.model', 'nvidia/nemotron-3.5-bolt-e4b');
+        $model = $provider === 'nvidia' ? preg_replace('/^nvidia\/nvidia\//', 'nvidia/', trim($rawModel)) : trim($rawModel);
+        $timeout = (int) ($activeConfig->timeout ?? config('ai.timeout', 60));
+        $maxTokens = (int) ($activeConfig->max_tokens ?? config('ai.max_tokens', 1000));
+        $temperature = (float) ($activeConfig->temperature ?? 0.70);
         $retryTimes = (int) config('ai.retry_times', 2);
         $retrySleep = (int) config('ai.retry_sleep_ms', 1000);
 
         $dbContext = $this->dbContextService ? $this->dbContextService->buildContext($message, $user) : '';
 
         if (empty($apiKey) || config('ai.mock', false)) {
-            Log::warning('[AI Assistant] API Key tidak dikonfigurasi dalam .env atau mode mock aktif, mengaktifkan local fallback');
+            Log::warning('[AI Assistant] API Key tidak dikonfigurasi dalam .env/database atau mode mock aktif, mengaktifkan local fallback');
 
             return [
                 'success' => true,
@@ -122,28 +142,10 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
 8. FORMAT TABEL MARKDOWN:
    - Jika Anda menyajikan data dalam bentuk tabel, gunakan sintaks tabel Markdown standar GitHub Flavored Markdown (baris header | Kolom 1 | Kolom 2 |, baris pemisah |:---|:---|, dan baris data) secara rapi agar sistem dapat merendernya sebagai tabel yang bersih.";
 
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-        ];
-
-        // Append recent conversation history (max 6 messages to keep context concise)
         $trimmedHistory = array_slice($history, -6);
-        foreach ($trimmedHistory as $item) {
-            if (isset($item['role'], $item['content']) && in_array($item['role'], ['user', 'assistant'])) {
-                $messages[] = [
-                    'role' => $item['role'],
-                    'content' => (string) $item['content'],
-                ];
-            }
-        }
 
-        // Append current user message
-        $messages[] = [
-            'role' => 'user',
-            'content' => $message,
-        ];
-
-        Log::info('[AI Assistant] Sending chat request to NVIDIA API', [
+        Log::info('[AI Assistant] Sending chat request', [
+            'provider' => $provider,
             'model' => $model,
             'user' => $userName,
             'role' => $userRole,
@@ -152,42 +154,112 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
         ]);
 
         try {
-            $response = Http::timeout($timeout)
-                ->retry($retryTimes, $retrySleep, function (Throwable $exception) {
-                    Log::warning('[AI Assistant] Retrying request due to exception: '.$exception->getMessage());
+            // PROVIDER: GEMINI
+            if ($provider === 'gemini') {
+                $endpointUrl = "{$baseUrl}/models/{$model}:generateContent?key={$apiKey}";
 
-                    return true;
-                }, throw: false)
-                ->withHeaders([
-                    'Authorization' => 'Bearer '.$apiKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post("{$baseUrl}/chat/completions", [
-                    'model' => $model,
-                    'messages' => $messages,
-                    'temperature' => 0.7,
-                    'max_tokens' => $maxTokens,
-                ]);
-
-            if ($response && $response->successful()) {
-                $json = $response->json();
-                $msg = $json['choices'][0]['message'] ?? [];
-                $reply = $msg['content'] ?? null;
-
-                if (empty($reply) && ! empty($msg['reasoning_content'])) {
-                    $reply = $msg['reasoning_content'];
+                $contents = [];
+                foreach ($trimmedHistory as $item) {
+                    if (isset($item['role'], $item['content']) && in_array($item['role'], ['user', 'assistant'])) {
+                        $contents[] = [
+                            'role' => $item['role'] === 'assistant' ? 'model' : 'user',
+                            'parts' => [['text' => (string) $item['content']]],
+                        ];
+                    }
                 }
 
-                if (! empty($reply)) {
-                    return [
-                        'success' => true,
-                        'reply' => trim($reply),
-                        'error' => null,
-                    ];
+                $contents[] = [
+                    'role' => 'user',
+                    'parts' => [['text' => $message]],
+                ];
+
+                $response = Http::timeout($timeout)
+                    ->retry($retryTimes, $retrySleep, function (Throwable $exception) {
+                        Log::warning('[AI Assistant Gemini] Retrying request due to exception: '.$exception->getMessage());
+
+                        return true;
+                    }, throw: false)
+                    ->post($endpointUrl, [
+                        'contents' => $contents,
+                        'systemInstruction' => [
+                            'parts' => [['text' => $systemPrompt]],
+                        ],
+                        'generationConfig' => [
+                            'temperature' => $temperature,
+                            'maxOutputTokens' => $maxTokens,
+                        ],
+                    ]);
+
+                if ($response && $response->successful()) {
+                    $json = $response->json();
+                    $reply = $json['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+                    if (! empty($reply)) {
+                        return [
+                            'success' => true,
+                            'reply' => trim($reply),
+                            'error' => null,
+                        ];
+                    }
+                }
+            } else {
+                // PROVIDER: NVIDIA / OPENAI / CUSTOM (OpenAI Compatible)
+                $messages = [
+                    ['role' => 'system', 'content' => $systemPrompt],
+                ];
+
+                foreach ($trimmedHistory as $item) {
+                    if (isset($item['role'], $item['content']) && in_array($item['role'], ['user', 'assistant'])) {
+                        $messages[] = [
+                            'role' => $item['role'],
+                            'content' => (string) $item['content'],
+                        ];
+                    }
+                }
+
+                $messages[] = [
+                    'role' => 'user',
+                    'content' => $message,
+                ];
+
+                $response = Http::timeout($timeout)
+                    ->retry($retryTimes, $retrySleep, function (Throwable $exception) {
+                        Log::warning('[AI Assistant] Retrying request due to exception: '.$exception->getMessage());
+
+                        return true;
+                    }, throw: false)
+                    ->withHeaders([
+                        'Authorization' => 'Bearer '.$apiKey,
+                        'Content-Type' => 'application/json',
+                    ])
+                    ->post("{$baseUrl}/chat/completions", [
+                        'model' => $model,
+                        'messages' => $messages,
+                        'temperature' => $temperature,
+                        'max_tokens' => $maxTokens,
+                    ]);
+
+                if ($response && $response->successful()) {
+                    $json = $response->json();
+                    $msg = $json['choices'][0]['message'] ?? [];
+                    $reply = $msg['content'] ?? null;
+
+                    if (empty($reply) && ! empty($msg['reasoning_content'])) {
+                        $reply = $msg['reasoning_content'];
+                    }
+
+                    if (! empty($reply)) {
+                        return [
+                            'success' => true,
+                            'reply' => trim($reply),
+                            'error' => null,
+                        ];
+                    }
                 }
             }
 
             Log::warning('[AI Assistant] HTTP response unsuccessful or empty, activating fallback', [
+                'provider' => $provider,
                 'status' => $response ? $response->status() : 'no_response',
                 'body' => $response ? ($response->json() ?? $response->body()) : null,
             ]);
@@ -213,6 +285,128 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
                 'success' => true,
                 'reply' => $this->generateLocalFallbackReply($message, $dbContext, $userName, $userRole, $user),
                 'error' => null,
+            ];
+        }
+    }
+
+    /**
+     * Test connection for an AI Configuration.
+     *
+     * @return array{success: bool, message: string, latency_ms: int, reply: ?string}
+     */
+    public function testConnection(AiConfiguration $config): array
+    {
+        $provider = strtolower($config->provider);
+        $apiKey = $config->api_key;
+        $baseUrl = rtrim($config->base_url, '/');
+        $model = trim($config->model);
+        $timeout = min((int) $config->timeout, 25);
+
+        if (empty($apiKey)) {
+            return [
+                'success' => false,
+                'message' => 'Kunci API (API Key) belum diisi untuk provider ini.',
+                'latency_ms' => 0,
+                'reply' => null,
+            ];
+        }
+
+        $startTime = microtime(true);
+
+        try {
+            if ($provider === 'gemini') {
+                $endpointUrl = "{$baseUrl}/models/{$model}:generateContent?key={$apiKey}";
+                $response = Http::timeout($timeout)->post($endpointUrl, [
+                    'contents' => [
+                        [
+                            'role' => 'user',
+                            'parts' => [['text' => 'Halo! Jawab singkat "Koneksi berhasil".']],
+                        ],
+                    ],
+                    'generationConfig' => [
+                        'maxOutputTokens' => 30,
+                        'temperature' => 0.2,
+                    ],
+                ]);
+
+                $latencyMs = (int) round((microtime(true) - $startTime) * 1000);
+
+                if ($response->successful()) {
+                    $json = $response->json();
+                    $reply = $json['candidates'][0]['content']['parts'][0]['text'] ?? 'Koneksi berhasil.';
+
+                    return [
+                        'success' => true,
+                        'message' => "Koneksi ke {$config->name} ({$model}) berhasil!",
+                        'latency_ms' => $latencyMs,
+                        'reply' => trim($reply),
+                    ];
+                }
+
+                $err = $response->json()['error']['message'] ?? "HTTP {$response->status()}";
+
+                return [
+                    'success' => false,
+                    'message' => "Gemini API Error: {$err}",
+                    'latency_ms' => $latencyMs,
+                    'reply' => null,
+                ];
+            }
+
+            if ($provider === 'nvidia') {
+                $model = preg_replace('/^nvidia\/nvidia\//', 'nvidia/', $model);
+            }
+
+            $endpointUrl = "{$baseUrl}/chat/completions";
+            $response = Http::timeout($timeout)
+                ->withHeaders([
+                    'Authorization' => 'Bearer '.$apiKey,
+                    'Content-Type' => 'application/json',
+                ])
+                ->post($endpointUrl, [
+                    'model' => $model,
+                    'messages' => [
+                        ['role' => 'user', 'content' => 'Halo! Jawab singkat "Koneksi berhasil".'],
+                    ],
+                    'max_tokens' => 30,
+                    'temperature' => 0.2,
+                ]);
+
+            $latencyMs = (int) round((microtime(true) - $startTime) * 1000);
+
+            if ($response->successful()) {
+                $json = $response->json();
+                $msg = $json['choices'][0]['message'] ?? [];
+                $reply = $msg['content'] ?? ($msg['reasoning_content'] ?? 'Koneksi berhasil.');
+
+                return [
+                    'success' => true,
+                    'message' => "Koneksi ke {$config->name} ({$model}) berhasil!",
+                    'latency_ms' => $latencyMs,
+                    'reply' => trim($reply),
+                ];
+            }
+
+            $body = $response->json() ?? [];
+            $err = $body['error']['message'] ?? ($body['error'] ?? "HTTP {$response->status()}");
+            if (is_array($err)) {
+                $err = json_encode($err);
+            }
+
+            return [
+                'success' => false,
+                'message' => "API Error: {$err}",
+                'latency_ms' => $latencyMs,
+                'reply' => null,
+            ];
+        } catch (Throwable $e) {
+            $latencyMs = (int) round((microtime(true) - $startTime) * 1000);
+
+            return [
+                'success' => false,
+                'message' => 'Koneksi gagal: '.$e->getMessage(),
+                'latency_ms' => $latencyMs,
+                'reply' => null,
             ];
         }
     }
@@ -275,7 +469,7 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
 
     /**
      * Generate an intelligent local fallback response from the loaded database context
-     * when the external NVIDIA AI service is temporarily slow or unreachable.
+     * when the external AI service is temporarily slow or unreachable.
      */
     public function generateLocalFallbackReply(
         string $message,
@@ -300,6 +494,38 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
         }
 
         $notice = "\n\n*(Catatan: Informasi di atas disajikan langsung oleh AI Assistant dari ringkasan database sistem kampus kami secara real-time).*";
+
+        // Query: Total Anggota (Role 'anggota') spesifik
+        if (preg_match('/(total|jumlah|berapa)\s+(banyak\s+)?(anggota|member)/i', $lower) && ! preg_match('/(pengguna|user|akun)/i', $lower)) {
+            $anggotaCount = User::where('role', 'anggota')->count();
+            $totalUsers = User::count();
+            $adminCount = User::where('role', 'admin')->count();
+            $pengurusCount = User::where('role', 'pengurus')->count();
+
+            if ($isAdmin || $isPengurus) {
+                return "Halo {$userName}! Total **anggota** (pengguna dengan peranan anggota) yang terdaftar di sistem saat ini adalah **{$anggotaCount} orang**.\n\n".
+                    "*(Sebagai informasi pelengkap, di sistem ini terdapat juga {$adminCount} Admin dan {$pengurusCount} Pengurus, sehingga total seluruh pengguna adalah {$totalUsers} orang)*".$notice;
+            }
+
+            return "Halo {$userName}! Total **anggota** yang terdaftar di sistem saat ini adalah **{$anggotaCount} orang**.".$notice;
+        }
+
+        // Query: Total Pengguna / User spesifik
+        if (preg_match('/(total|jumlah|berapa)\s+(banyak\s+)?(pengguna|user|akun)/i', $lower) && ! preg_match('/(kegiatan|polling|diskusi|dokumen|organisasi)/i', $lower)) {
+            if ($isAnggota) {
+                return "Halo {$userName}. Sesuai kebijakan sistem, rincian data administratif akun pengguna hanya dapat diakses oleh Pengurus Organisasi dan Administrator.".$notice;
+            }
+
+            $totalUsers = User::count();
+            $adminCount = User::where('role', 'admin')->count();
+            $pengurusCount = User::where('role', 'pengurus')->count();
+            $anggotaCount = User::where('role', 'anggota')->count();
+
+            return "Halo {$userName}! Total **seluruh pengguna** yang terdaftar dalam sistem adalah **{$totalUsers} orang**, dengan rincian peranan:\n\n".
+                "• **Anggota**: {$anggotaCount} orang\n".
+                "• **Pengurus**: {$pengurusCount} orang\n".
+                "• **Admin**: {$adminCount} orang".$notice;
+        }
 
         // Query: Events / Kegiatan
         if (preg_match('/(kegiatan|acara|event|workshop|seminar|lomba|buka|daftar)/i', $lower)) {
@@ -405,38 +631,6 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
             }
 
             return "Halo {$userName}! Berikut adalah beberapa organisasi/UKM yang terdaftar di kampus:\n\n".implode("\n", $list).$notice;
-        }
-
-        // Query: Total Anggota (Role 'anggota') spesifik
-        if (preg_match('/(total|jumlah|berapa)\s+(banyak\s+)?(anggota|member)/i', $lower) && ! preg_match('/(pengguna|user|akun)/i', $lower)) {
-            $anggotaCount = User::where('role', 'anggota')->count();
-            $totalUsers = User::count();
-            $adminCount = User::where('role', 'admin')->count();
-            $pengurusCount = User::where('role', 'pengurus')->count();
-
-            if ($isAdmin || $isPengurus) {
-                return "Halo {$userName}! Total **anggota** (pengguna dengan peranan anggota) yang terdaftar di sistem saat ini adalah **{$anggotaCount} orang**.\n\n".
-                    "*(Sebagai informasi pelengkap, di sistem ini terdapat juga {$adminCount} Admin dan {$pengurusCount} Pengurus, sehingga total seluruh pengguna adalah {$totalUsers} orang)*".$notice;
-            }
-
-            return "Halo {$userName}! Total **anggota** yang terdaftar di sistem saat ini adalah **{$anggotaCount} orang**.".$notice;
-        }
-
-        // Query: Total Pengguna / User spesifik
-        if (preg_match('/(total|jumlah|berapa)\s+(banyak\s+)?(pengguna|user|akun)/i', $lower) && ! preg_match('/(kegiatan|polling|diskusi|dokumen|organisasi)/i', $lower)) {
-            if ($isAnggota) {
-                return "Halo {$userName}. Sesuai kebijakan sistem, rincian data administratif akun pengguna hanya dapat diakses oleh Pengurus Organisasi dan Administrator.".$notice;
-            }
-
-            $totalUsers = User::count();
-            $adminCount = User::where('role', 'admin')->count();
-            $pengurusCount = User::where('role', 'pengurus')->count();
-            $anggotaCount = User::where('role', 'anggota')->count();
-
-            return "Halo {$userName}! Total **seluruh pengguna** yang terdaftar dalam sistem adalah **{$totalUsers} orang**, dengan rincian peranan:\n\n".
-                "• **Anggota**: {$anggotaCount} orang\n".
-                "• **Pengurus**: {$pengurusCount} orang\n".
-                "• **Admin**: {$adminCount} orang".$notice;
         }
 
         // Query: Statistik / Ringkasan Sistem Umum
