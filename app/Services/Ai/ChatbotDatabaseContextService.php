@@ -9,6 +9,7 @@ use App\Models\Event;
 use App\Models\EventFeedback;
 use App\Models\Organization;
 use App\Models\Poll;
+use App\Models\PollVote;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -70,17 +71,18 @@ class ChatbotDatabaseContextService
             }
 
             // 9. Targeted / Keyword Search matching the user's specific query (Role-filtered)
-            if (!empty(trim($userMessage))) {
+            if (! empty(trim($userMessage))) {
                 $searchSection = $this->getTargetedSearchSection($userMessage, $user, $isAdmin, $isPengurus, $managedOrgIds);
-                if (!empty($searchSection)) {
+                if (! empty($searchSection)) {
                     $sections[] = $searchSection;
                 }
             }
 
             return implode("\n\n", array_filter($sections));
         } catch (Throwable $e) {
-            Log::warning('[ChatbotDatabaseContextService] Error building database context: ' . $e->getMessage());
-            return "Catatan: Terjadi kendala saat membaca data ringkasan database: " . $e->getMessage();
+            Log::warning('[ChatbotDatabaseContextService] Error building database context: '.$e->getMessage());
+
+            return 'Catatan: Terjadi kendala saat membaca data ringkasan database: '.$e->getMessage();
         }
     }
 
@@ -123,7 +125,10 @@ class ChatbotDatabaseContextService
             return <<<TEXT
 [1. RINGKASAN STATISTIK DATABASE SISTEM (KHUSUS ADMINISTRATOR)]
 - Total Organisasi Terdaftar: {$totalOrgs} organisasi/UKM
-- Total Pengguna: {$totalUsers} orang (Admin: {$adminCount}, Pengurus: {$pengurusCount}, Anggota: {$anggotaCount})
+- Total Pengguna: {$totalUsers} orang (Total seluruh akun terdaftar: Anggota: {$anggotaCount}, Pengurus: {$pengurusCount}, Admin: {$adminCount})
+- Khusus Total Anggota (Role 'anggota'): {$anggotaCount} orang [PENTING: Jika ditanya "total anggota" atau "jumlah anggota", jawab {$anggotaCount} orang, BUKAN {$totalUsers} orang!]
+- Khusus Total Pengurus: {$pengurusCount} orang
+- Khusus Total Administrator: {$adminCount} orang
 - Total Kegiatan Mahasiswa: {$totalEvents} kegiatan (Aktif/Dibuka: {$activeEvents}, Menunggu/Draft: {$pendingEvents}, Selesai: {$completedEvents})
 - Total Polling & Voting: {$totalPolls} polling (Aktif berjalan: {$activePolls}, Ditutup/Selesai: {$closedPolls})
 - Total Dokumen Proposal & LPJ: {$totalDocs} dokumen (Disetujui: {$approvedDocs}, Menunggu Review: {$pendingDocs}, Ditolak: {$rejectedDocs})
@@ -136,8 +141,8 @@ TEXT;
         if ($isPengurus) {
             $myEventsCount = Event::whereIn('organization_id', $managedOrgIds)->count();
             $myDocsCount = Document::where(function ($q) use ($managedOrgIds, $user) {
-                $q->whereHas('event', fn($eq) => $eq->whereIn('organization_id', $managedOrgIds))
-                  ->orWhere('submitted_by', $user->id);
+                $q->whereHas('event', fn ($eq) => $eq->whereIn('organization_id', $managedOrgIds))
+                    ->orWhere('submitted_by', $user->id);
             })->count();
 
             return <<<TEXT
@@ -171,7 +176,7 @@ TEXT;
             return "[2. DAFTAR ORGANISASI / UKM]\n(Belum ada organisasi yang terdaftar di database)";
         }
 
-        $lines = ["[2. DAFTAR ORGANISASI / UKM TERDAFTAR DI DATABASE]"];
+        $lines = ['[2. DAFTAR ORGANISASI / UKM TERDAFTAR DI DATABASE]'];
         foreach ($orgs as $org) {
             $codeStr = $org->code ? " [{$org->code}]" : '';
             $desc = $org->description ? Str::limit(strip_tags($org->description), 100) : 'Tidak ada deskripsi.';
@@ -195,7 +200,7 @@ TEXT;
             // Pengurus sees active events + events belonging to their managed org
             $events = $query->where(function ($q) use ($managedOrgIds) {
                 $q->where('status', 'active')
-                  ->orWhereIn('organization_id', $managedOrgIds);
+                    ->orWhereIn('organization_id', $managedOrgIds);
             })->latest('created_at')->take(8)->get();
         } else {
             // Anggota / Guest ONLY sees active events
@@ -206,13 +211,13 @@ TEXT;
             return "[3. DATA KEGIATAN MAHASISWA]\n(Belum ada kegiatan yang dapat ditampilkan untuk hak akses Anda)";
         }
 
-        $lines = ["[3. DATA KEGIATAN MAHASISWA (TERKINI & AKTIF)]"];
+        $lines = ['[3. DATA KEGIATAN MAHASISWA (TERKINI & AKTIF)]'];
         foreach ($events as $event) {
             $orgName = $event->organization->name ?? 'Umum / Tanpa Organisasi';
             $registeredCount = $event->registrations->count();
             $quotaStr = $event->quota ? "{$registeredCount}/{$event->quota} peserta" : "{$registeredCount} peserta (Kuota tak terbatas)";
-            $startTime = $event->start_time ? $event->start_time->translatedFormat('d F Y, H:i') . ' WIB' : 'Waktu belum ditentukan';
-            $endTime = $event->end_time ? $event->end_time->translatedFormat('d F Y, H:i') . ' WIB' : '-';
+            $startTime = $event->start_time ? $event->start_time->translatedFormat('d F Y, H:i').' WIB' : 'Waktu belum ditentukan';
+            $endTime = $event->end_time ? $event->end_time->translatedFormat('d F Y, H:i').' WIB' : '-';
             $descSnippet = Str::limit(strip_tags($event->description ?? ''), 120);
 
             $lines[] = <<<ITEM
@@ -233,9 +238,9 @@ ITEM;
      */
     protected function getPollsSection(?User $user, bool $isAdmin, bool $isPengurus): string
     {
-        $query = Poll::with(['organization', 'options' => fn($q) => $q->withCount('votes')])->latest('created_at');
+        $query = Poll::with(['organization', 'options' => fn ($q) => $q->withCount('votes')])->latest('created_at');
 
-        if (!$isAdmin && !$isPengurus) {
+        if (! $isAdmin && ! $isPengurus) {
             // Anggota sees active polls or recent public polls
             $query->where('status', 'active');
         }
@@ -246,10 +251,10 @@ ITEM;
             return "[4. DATA POLLING & VOTING ORGANISASI]\n(Belum ada polling yang dapat ditampilkan untuk hak akses Anda)";
         }
 
-        $lines = ["[4. DATA POLLING & VOTING ORGANISASI]"];
+        $lines = ['[4. DATA POLLING & VOTING ORGANISASI]'];
         foreach ($polls as $poll) {
             $orgName = $poll->organization->name ?? 'Organisasi Umum';
-            $deadlineStr = $poll->deadline ? $poll->deadline->translatedFormat('d F Y, H:i') . ' WIB' : 'Tanpa batas waktu';
+            $deadlineStr = $poll->deadline ? $poll->deadline->translatedFormat('d F Y, H:i').' WIB' : 'Tanpa batas waktu';
             $isClosed = $poll->isClosed();
             $statusLabel = $isClosed ? 'Ditutup / Selesai' : 'Aktif';
             $totalVotes = $poll->totalVotes();
@@ -258,9 +263,9 @@ ITEM;
             foreach ($poll->options as $index => $opt) {
                 $votes = $opt->votes_count ?? $opt->votesCount();
                 $pct = $totalVotes > 0 ? round(($votes / $totalVotes) * 100, 1) : 0;
-                $optLines[] = "    " . ($index + 1) . ". {$opt->option_text} ({$votes} suara, {$pct}%)";
+                $optLines[] = '    '.($index + 1).". {$opt->option_text} ({$votes} suara, {$pct}%)";
             }
-            $optionsBlock = !empty($optLines) ? implode("\n", $optLines) : "    (Belum ada opsi)";
+            $optionsBlock = ! empty($optLines) ? implode("\n", $optLines) : '    (Belum ada opsi)';
 
             $lines[] = <<<ITEM
 - Polling: "{$poll->title}" (ID: {$poll->id}, Status: {$statusLabel})
@@ -286,7 +291,7 @@ ITEM;
             return "[5. DATA RUANG DISKUSI TERKINI]\n(Belum ada postingan diskusi di Ruang Diskusi)";
         }
 
-        $lines = ["[5. DATA RUANG DISKUSI TERKINI]"];
+        $lines = ['[5. DATA RUANG DISKUSI TERKINI]'];
         foreach ($posts as $post) {
             $authorName = $post->user->name ?? 'Pengguna Anonim';
             $authorRole = $post->user ? ucfirst($post->user->role) : 'Anggota';
@@ -298,10 +303,11 @@ ITEM;
             $recentComments = $post->comments->take(2)->map(function ($c) {
                 $cAuthor = $c->user->name ?? 'Pengguna';
                 $cText = Str::limit(strip_tags($c->content), 80);
+
                 return "    - {$cAuthor}: \"{$cText}\"";
             })->implode("\n");
 
-            $commentsInfo = !empty($recentComments) ? "\n  * Komentar Terbaru:\n{$recentComments}" : "";
+            $commentsInfo = ! empty($recentComments) ? "\n  * Komentar Terbaru:\n{$recentComments}" : '';
 
             $lines[] = <<<ITEM
 - Diskusi: "{$post->title}" (ID: {$post->id})
@@ -323,7 +329,7 @@ ITEM;
     protected function getDocumentsSection(?User $user, bool $isAdmin, bool $isPengurus, array $managedOrgIds): string
     {
         // 1. ANGGOTA or GUEST: STRICTLY RESTRICTED
-        if (!$user || $user->isAnggota()) {
+        if (! $user || $user->isAnggota()) {
             return "[6. DATA DOKUMEN PROPOSAL & LPJ]\n(Akses dokumen internal proposal & LPJ organisasi dibatasi hanya untuk Pengurus Organisasi dan Administrator sistem. Anggota biasa hanya dapat melihat status proposal yang diajukannya sendiri di bagian Konteks Pengguna).";
         }
 
@@ -334,8 +340,8 @@ ITEM;
             // 3. PENGURUS: Only docs of their managed organization(s) or submitted by them
             $docs = Document::with(['event', 'submitter', 'approver'])
                 ->where(function ($q) use ($managedOrgIds, $user) {
-                    $q->whereHas('event', fn($eq) => $eq->whereIn('organization_id', $managedOrgIds))
-                      ->orWhere('submitted_by', $user->id);
+                    $q->whereHas('event', fn ($eq) => $eq->whereIn('organization_id', $managedOrgIds))
+                        ->orWhere('submitted_by', $user->id);
                 })
                 ->latest('created_at')
                 ->take(8)
@@ -346,14 +352,14 @@ ITEM;
             return "[6. DATA DOKUMEN PROPOSAL & LPJ]\n(Belum ada dokumen proposal atau LPJ yang tercatat untuk hak akses Anda)";
         }
 
-        $lines = ["[6. DATA DOKUMEN PROPOSAL & LPJ]"];
+        $lines = ['[6. DATA DOKUMEN PROPOSAL & LPJ]'];
         foreach ($docs as $doc) {
             $eventTitle = $doc->event->title ?? 'Tidak terhubung kegiatan spesifik';
             $submitterName = $doc->submitter->name ?? 'Pengguna';
             $approverName = $doc->approver->name ?? '-';
             $typeLabel = strtoupper($doc->type);
             $statusLabel = ucfirst($doc->status);
-            $notesStr = $doc->notes ? " | Catatan: " . Str::limit(strip_tags($doc->notes), 80) : '';
+            $notesStr = $doc->notes ? ' | Catatan: '.Str::limit(strip_tags($doc->notes), 80) : '';
 
             $lines[] = <<<ITEM
 - "{$doc->title}" (Tipe: {$typeLabel}, Status: {$statusLabel})
@@ -374,7 +380,7 @@ ITEM;
     protected function getFeedbackSummarySection(?User $user, bool $isAdmin, bool $isPengurus, array $managedOrgIds): string
     {
         // 1. ANGGOTA or GUEST: Internal sentiment scores and critique details are restricted
-        if (!$user || $user->isAnggota()) {
+        if (! $user || $user->isAnggota()) {
             return "[7. RINGKASAN FEEDBACK & SENTIMEN KEGIATAN]\n(Rincian evaluasi sentimen internal kegiatan dibatasi hanya untuk Pengurus Organisasi dan Administrator).";
         }
 
@@ -397,7 +403,7 @@ ITEM;
         }
 
         $grouped = $feedbacks->groupBy('event_id');
-        $lines = ["[7. RINGKASAN FEEDBACK & SENTIMEN KEGIATAN]"];
+        $lines = ['[7. RINGKASAN FEEDBACK & SENTIMEN KEGIATAN]'];
 
         foreach ($grouped as $eventId => $items) {
             $event = $items->first()->event;
@@ -429,23 +435,24 @@ ITEM;
     {
         $user->loadMissing(['organizations', 'eventRegistrations.event', 'submittedDocuments']);
 
-        $orgs = $user->organizations->map(fn($o) => "{$o->name} (" . ($o->pivot->role_in_org ?? 'anggota') . ")")->implode(', ');
-        $orgsStr = !empty($orgs) ? $orgs : 'Belum bergabung ke organisasi manapun';
+        $orgs = $user->organizations->map(fn ($o) => "{$o->name} (".($o->pivot->role_in_org ?? 'anggota').')')->implode(', ');
+        $orgsStr = ! empty($orgs) ? $orgs : 'Belum bergabung ke organisasi manapun';
 
         $regs = $user->eventRegistrations->map(function ($r) {
             $eName = $r->event->title ?? "Kegiatan #{$r->event_id}";
+
             return "{$eName} [Status: {$r->status}]";
         })->implode(', ');
-        $regsStr = !empty($regs) ? $regs : 'Belum mendaftar di kegiatan apapun';
+        $regsStr = ! empty($regs) ? $regs : 'Belum mendaftar di kegiatan apapun';
 
         $docs = $user->submittedDocuments->map(function ($d) {
-            return "{$d->title} (" . strtoupper($d->type) . " - Status: {$d->status})";
+            return "{$d->title} (".strtoupper($d->type)." - Status: {$d->status})";
         })->implode(', ');
-        $docsStr = !empty($docs) ? $docs : 'Belum pernah mengajukan proposal/LPJ';
+        $docsStr = ! empty($docs) ? $docs : 'Belum pernah mengajukan proposal/LPJ';
 
-        $votedPollIds = \App\Models\PollVote::where('user_id', $user->id)->pluck('poll_id')->unique();
+        $votedPollIds = PollVote::where('user_id', $user->id)->pluck('poll_id')->unique();
         $votedPolls = Poll::whereIn('id', $votedPollIds)->pluck('title')->implode(', ');
-        $pollsStr = !empty($votedPolls) ? $votedPolls : 'Belum pernah memberikan suara pada polling';
+        $pollsStr = ! empty($votedPolls) ? $votedPolls : 'Belum pernah memberikan suara pada polling';
 
         return <<<TEXT
 [8. DATA PENGGUNA YANG SEDANG LOGIN ({$user->name})]
@@ -469,13 +476,13 @@ TEXT;
             'atau', 'adalah', 'apakah', 'bagaimana', 'kapan', 'dimana', 'siapa', 'mengapa',
             'berapa', 'tolong', 'bisa', 'ada', 'apa', 'halo', 'hai', 'selamat', 'pagi',
             'siang', 'sore', 'malam', 'terima', 'kasih', 'saya', 'kamu', 'anda', 'minta',
-            'kegiatan', 'polling', 'diskusi', 'dokumen', 'proposal', 'lpj', 'tentang'
+            'kegiatan', 'polling', 'diskusi', 'dokumen', 'proposal', 'lpj', 'tentang',
         ];
 
         // Clean query and extract keywords
         $words = preg_split('/[\s,\.\?\!\:\;\"\']+/u', mb_strtolower($query));
         $keywords = array_filter($words, function ($w) use ($stopWords) {
-            return mb_strlen($w) >= 3 && !in_array($w, $stopWords);
+            return mb_strlen($w) >= 3 && ! in_array($w, $stopWords);
         });
 
         if (empty($keywords)) {
@@ -489,16 +496,16 @@ TEXT;
             ->where(function ($q) use ($keywords) {
                 foreach ($keywords as $word) {
                     $q->orWhere('title', 'like', "%{$word}%")
-                      ->orWhere('description', 'like', "%{$word}%")
-                      ->orWhere('location', 'like', "%{$word}%");
+                        ->orWhere('description', 'like', "%{$word}%")
+                        ->orWhere('location', 'like', "%{$word}%");
                 }
             });
 
-        if (!$isAdmin) {
+        if (! $isAdmin) {
             if ($isPengurus) {
                 $eventQuery->where(function ($q) use ($managedOrgIds) {
                     $q->where('status', 'active')
-                      ->orWhereIn('organization_id', $managedOrgIds);
+                        ->orWhereIn('organization_id', $managedOrgIds);
                 });
             } else {
                 $eventQuery->where('status', 'active');
@@ -507,7 +514,7 @@ TEXT;
 
         $matchingEvents = $eventQuery->take(3)->get();
         if ($matchingEvents->isNotEmpty()) {
-            $eventLines = ["[PENCARIAN KHUSUS: KEGIATAN RELEVAN]"];
+            $eventLines = ['[PENCARIAN KHUSUS: KEGIATAN RELEVAN]'];
             foreach ($matchingEvents as $e) {
                 $org = $e->organization->name ?? 'Umum';
                 $registered = $e->registrations->count();
@@ -522,19 +529,19 @@ TEXT;
             ->where(function ($q) use ($keywords) {
                 foreach ($keywords as $word) {
                     $q->orWhere('title', 'like', "%{$word}%")
-                      ->orWhere('description', 'like', "%{$word}%");
+                        ->orWhere('description', 'like', "%{$word}%");
                 }
             });
 
-        if (!$isAdmin && !$isPengurus) {
+        if (! $isAdmin && ! $isPengurus) {
             $pollQuery->where('status', 'active');
         }
 
         $matchingPolls = $pollQuery->take(3)->get();
         if ($matchingPolls->isNotEmpty()) {
-            $pollLines = ["[PENCARIAN KHUSUS: POLLING RELEVAN]"];
+            $pollLines = ['[PENCARIAN KHUSUS: POLLING RELEVAN]'];
             foreach ($matchingPolls as $p) {
-                $opts = $p->options->map(fn($o) => "{$o->option_text} ({$o->votes_count} suara)")->implode(', ');
+                $opts = $p->options->map(fn ($o) => "{$o->option_text} ({$o->votes_count} suara)")->implode(', ');
                 $pollLines[] = "- \"{$p->title}\" (Status: {$p->status}, Deadline: {$p->deadline}, Total Suara: {$p->totalVotes()})\n  Opsi Pilihan: {$opts}";
             }
             $results[] = implode("\n", $pollLines);
@@ -545,19 +552,19 @@ TEXT;
             ->where(function ($q) use ($keywords) {
                 foreach ($keywords as $word) {
                     $q->orWhere('title', 'like', "%{$word}%")
-                      ->orWhere('content', 'like', "%{$word}%");
+                        ->orWhere('content', 'like', "%{$word}%");
                 }
             })
             ->take(3)
             ->get();
 
         if ($matchingPosts->isNotEmpty()) {
-            $postLines = ["[PENCARIAN KHUSUS: RUANG DISKUSI RELEVAN]"];
+            $postLines = ['[PENCARIAN KHUSUS: RUANG DISKUSI RELEVAN]'];
             foreach ($matchingPosts as $p) {
                 $author = $p->user->name ?? 'Anonim';
                 $postLines[] = "- \"{$p->title}\" oleh {$author} ({$p->created_at->diffForHumans()})\n  Isi: {$p->content}";
                 if ($p->comments->isNotEmpty()) {
-                    $allComments = $p->comments->take(5)->map(fn($c) => "    * " . ($c->user->name ?? 'User') . ": " . strip_tags($c->content))->implode("\n");
+                    $allComments = $p->comments->take(5)->map(fn ($c) => '    * '.($c->user->name ?? 'User').': '.strip_tags($c->content))->implode("\n");
                     $postLines[] = "  Daftar Komentar:\n{$allComments}";
                 }
             }
@@ -570,25 +577,25 @@ TEXT;
                 ->where(function ($q) use ($keywords) {
                     foreach ($keywords as $word) {
                         $q->orWhere('title', 'like', "%{$word}%")
-                          ->orWhere('background', 'like', "%{$word}%")
-                          ->orWhere('notes', 'like', "%{$word}%");
+                            ->orWhere('background', 'like', "%{$word}%")
+                            ->orWhere('notes', 'like', "%{$word}%");
                     }
                 });
 
-            if (!$isAdmin && $isPengurus) {
+            if (! $isAdmin && $isPengurus) {
                 $docQuery->where(function ($q) use ($managedOrgIds, $user) {
-                    $q->whereHas('event', fn($eq) => $eq->whereIn('organization_id', $managedOrgIds))
-                      ->orWhere('submitted_by', $user->id);
+                    $q->whereHas('event', fn ($eq) => $eq->whereIn('organization_id', $managedOrgIds))
+                        ->orWhere('submitted_by', $user->id);
                 });
             }
 
             $matchingDocs = $docQuery->take(3)->get();
             if ($matchingDocs->isNotEmpty()) {
-                $docLines = ["[PENCARIAN KHUSUS: DOKUMEN RELEVAN]"];
+                $docLines = ['[PENCARIAN KHUSUS: DOKUMEN RELEVAN]'];
                 foreach ($matchingDocs as $d) {
                     $event = $d->event->title ?? '-';
                     $submitter = $d->submitter->name ?? '-';
-                    $docLines[] = "- \"{$d->title}\" (Tipe: " . strtoupper($d->type) . ", Status: {$d->status}, Terkait Kegiatan: \"{$event}\", Pengaju: {$submitter})\n  Latar Belakang: " . Str::limit(strip_tags($d->background), 200) . "\n  Catatan Review: " . ($d->notes ?: 'Tidak ada catatan');
+                    $docLines[] = "- \"{$d->title}\" (Tipe: ".strtoupper($d->type).", Status: {$d->status}, Terkait Kegiatan: \"{$event}\", Pengaju: {$submitter})\n  Latar Belakang: ".Str::limit(strip_tags($d->background), 200)."\n  Catatan Review: ".($d->notes ?: 'Tidak ada catatan');
                 }
                 $results[] = implode("\n", $docLines);
             }

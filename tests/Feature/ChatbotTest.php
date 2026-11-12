@@ -221,4 +221,39 @@ class ChatbotTest extends TestCase
         $this->assertStringNotContainsString('bersifat rahasia dan hanya dapat diakses oleh Pengurus Organisasi', $result['reply']);
         $this->assertStringContainsString('Proposal Anggaran Dies Natalis Himpunan', $result['reply']);
     }
+
+    public function test_chatbot_correctly_differentiates_total_anggota_from_total_pengguna(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        User::factory()->create(['role' => 'pengurus']);
+        User::factory()->count(14)->create(['role' => 'anggota']);
+
+        $service = app(NvidiaChatService::class);
+
+        // Query total anggota
+        $resAnggota = $service->chat(
+            message: 'Berapa total anggota?',
+            userName: $admin->name,
+            userRole: ucfirst($admin->role),
+            user: $admin
+        );
+
+        $this->assertTrue($resAnggota['success']);
+        // Must mention 14 as total anggota, not 16 as total anggota
+        $this->assertStringContainsString('14', $resAnggota['reply']);
+        $this->assertStringContainsString('anggota', strtolower($resAnggota['reply']));
+
+        // Query total pengguna
+        $resPengguna = $service->chat(
+            message: 'Berapa total pengguna?',
+            userName: $admin->name,
+            userRole: ucfirst($admin->role),
+            user: $admin
+        );
+
+        $this->assertTrue($resPengguna['success']);
+        // Total users is 16 (1 admin + 1 pengurus + 14 anggota)
+        $this->assertStringContainsString('16', $resPengguna['reply']);
+        $this->assertStringContainsString('pengguna', strtolower($resPengguna['reply']));
+    }
 }

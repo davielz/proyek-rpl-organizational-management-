@@ -197,10 +197,12 @@ window.renderAiMessages = function() {
         wrap.className = msg.role === 'user' ? 'flex justify-end' : 'flex justify-start';
 
         const bubble = document.createElement('div');
+        const hasTable = msg.role !== 'user' && msg.content && msg.content.includes('|');
+
         if (msg.role === 'user') {
-            bubble.className = 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl rounded-tr-none px-3.5 py-2 text-xs max-w-[85%] shadow-md leading-relaxed';
+            bubble.className = 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl rounded-tr-none px-3.5 py-2 text-xs max-w-[85%] shadow-md leading-relaxed break-words';
         } else {
-            bubble.className = 'bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs max-w-[88%] space-y-1 shadow-sm dark:shadow-md leading-relaxed';
+            bubble.className = (hasTable ? 'max-w-[96%] w-full' : 'max-w-[88%]') + ' bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 rounded-2xl rounded-tl-none px-3.5 py-2.5 text-xs shadow-sm dark:shadow-md leading-relaxed break-words overflow-hidden';
         }
 
         bubble.innerHTML = window.formatAiMarkdownText(msg.content);
@@ -218,12 +220,204 @@ window.scrollAiChatToBottom = function() {
 
 window.formatAiMarkdownText = function(text) {
     if (!text) return '';
-    let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    html = html.replace(/`(.*?)`/g, '<code class="bg-slate-100 dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 px-1 py-0.5 rounded text-[11px] font-mono">$1</code>');
-    html = html.replace(/\n/g, '<br>');
-    return html;
+
+    // 1. Extract code blocks first to protect their raw content
+    const codeBlocks = [];
+    let processed = text.replace(/```([a-zA-Z0-9_-]*)\r?\n([\s\S]*?)```/g, (match, lang, code) => {
+        const placeholder = '___AI_CODE_BLOCK_' + codeBlocks.length + '___';
+        codeBlocks.push(
+            '<div class="my-2 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-900 text-slate-100 p-3 overflow-x-auto text-[11px] font-mono shadow-sm">' +
+            '<code>' + escapeHtml(code.trim()) + '</code>' +
+            '</div>'
+        );
+        return placeholder;
+    });
+
+    const lines = processed.split(/\r?\n/);
+    const output = [];
+    let inTable = false;
+    let tableLines = [];
+    let inList = false;
+    let listType = null;
+    let listItems = [];
+
+    function escapeHtml(str) {
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function formatInline(str) {
+        let res = escapeHtml(str);
+        res = res.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        res = res.replace(/\*(.*?)\*/g, '<em>$1</em>');
+        res = res.replace(/`(.*?)`/g, '<code class="bg-slate-100 dark:bg-slate-900 text-indigo-700 dark:text-indigo-300 px-1 py-0.5 rounded text-[11px] font-mono">$1</code>');
+        return res;
+    }
+
+    function flushList() {
+        if (!inList || listItems.length === 0) return;
+        const tag = listType === 'ol' ? 'ol' : 'ul';
+        const cls = listType === 'ol'
+            ? 'list-decimal list-outside pl-4 space-y-1 my-1.5'
+            : 'list-disc list-outside pl-4 space-y-1 my-1.5';
+        let html = '<' + tag + ' class="' + cls + '">';
+        listItems.forEach(item => {
+            html += '<li class="leading-relaxed">' + formatInline(item) + '</li>';
+        });
+        html += '</' + tag + '>';
+        output.push(html);
+        inList = false;
+        listType = null;
+        listItems = [];
+    }
+
+    function flushTable() {
+        if (!inTable) return;
+        if (tableLines.length >= 2) {
+            const headerLine = tableLines[0];
+            const sepLine = tableLines[1];
+            const rowLines = tableLines.slice(2);
+
+            const parseRow = (line) => {
+                let r = line.trim();
+                if (r.startsWith('|')) r = r.slice(1);
+                if (r.endsWith('|')) r = r.slice(0, -1);
+                return r.split('|').map(c => c.trim());
+            };
+
+            const headers = parseRow(headerLine);
+            const seps = parseRow(sepLine);
+            const aligns = seps.map(s => {
+                const l = s.startsWith(':');
+                const r = s.endsWith(':');
+                if (l && r) return 'text-center';
+                if (r) return 'text-right';
+                return 'text-left';
+            });
+
+            let html = '<div class="overflow-x-auto my-2 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-sm max-w-full">';
+            html += '<table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700 text-xs border-collapse">';
+            html += '<thead class="bg-slate-100/90 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-[11px] uppercase tracking-wider"><tr>';
+            headers.forEach((h, i) => {
+                const align = aligns[i] || 'text-left';
+                html += '<th class="px-3 py-2 border-b border-slate-200 dark:border-slate-700 ' + align + ' whitespace-nowrap">' + formatInline(h) + '</th>';
+            });
+            html += '</tr></thead>';
+            html += '<tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">';
+            rowLines.forEach(row => {
+                const cells = parseRow(row);
+                html += '<tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">';
+                cells.forEach((c, i) => {
+                    const align = aligns[i] || 'text-left';
+                    html += '<td class="px-3 py-2 text-slate-700 dark:text-slate-300 ' + align + ' text-[11px] whitespace-nowrap">' + formatInline(c) + '</td>';
+                });
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            output.push(html);
+        } else {
+            tableLines.forEach(l => output.push(formatInline(l)));
+        }
+        tableLines = [];
+        inTable = false;
+    }
+
+    function isTableRow(line) {
+        const trimmed = line.trim();
+        return trimmed.startsWith('|') && trimmed.includes('|', 1);
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        const trimmed = rawLine.trim();
+
+        // Check if table row
+        if (isTableRow(rawLine)) {
+            flushList();
+            inTable = true;
+            tableLines.push(rawLine);
+            continue;
+        } else if (inTable) {
+            flushTable();
+        }
+
+        // Empty line
+        if (!trimmed) {
+            flushList();
+            output.push('');
+            continue;
+        }
+
+        // Headings
+        if (trimmed.startsWith('### ')) {
+            flushList();
+            output.push('<h4 class="font-bold text-slate-900 dark:text-white text-xs mt-2.5 mb-1 tracking-tight">' + formatInline(trimmed.slice(4)) + '</h4>');
+            continue;
+        }
+        if (trimmed.startsWith('## ')) {
+            flushList();
+            output.push('<h3 class="font-bold text-slate-900 dark:text-white text-sm mt-3 mb-1.5 tracking-tight">' + formatInline(trimmed.slice(3)) + '</h3>');
+            continue;
+        }
+
+        // Blockquote
+        if (trimmed.startsWith('> ')) {
+            flushList();
+            output.push('<blockquote class="border-l-2 border-indigo-500 pl-2.5 my-1 text-slate-600 dark:text-slate-400 italic">' + formatInline(trimmed.slice(2)) + '</blockquote>');
+            continue;
+        }
+
+        // Unordered list (*, -, •)
+        const ulMatch = trimmed.match(/^[\*\-•]\s+(.*)$/);
+        if (ulMatch) {
+            if (inList && listType !== 'ul') flushList();
+            inList = true;
+            listType = 'ul';
+            listItems.push(ulMatch[1]);
+            continue;
+        }
+
+        // Ordered list (1. , 2. )
+        const olMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+        if (olMatch) {
+            if (inList && listType !== 'ol') flushList();
+            inList = true;
+            listType = 'ol';
+            listItems.push(olMatch[1]);
+            continue;
+        }
+
+        // Normal paragraph/line
+        flushList();
+        output.push(formatInline(rawLine));
+    }
+
+    if (inTable) flushTable();
+    if (inList) flushList();
+
+    // Assemble lines
+    let result = '';
+    for (let i = 0; i < output.length; i++) {
+        const curr = output[i];
+        if (!curr && i > 0 && output[i - 1] === '') {
+            continue;
+        }
+        if (curr.startsWith('<div') || curr.startsWith('<ul') || curr.startsWith('<ol') || curr.startsWith('<h3') || curr.startsWith('<h4') || curr.startsWith('<blockquote')) {
+            result += curr;
+        } else {
+            result += curr + '<br>';
+        }
+    }
+
+    let cleaned = result.replace(/(<br>)+$/g, '')
+        .replace(/(<br>)(<div|<ul|<ol|<h3|<h4|<blockquote)/g, '$2')
+        .replace(/(<\/div>|<\/ul>|<\/ol>|<\/h3>|<\/h4>|<\/blockquote>)<br>/g, '$1');
+
+    // Restore code blocks
+    codeBlocks.forEach((block, idx) => {
+        cleaned = cleaned.replace('___AI_CODE_BLOCK_' + idx + '___', block);
+    });
+
+    return cleaned;
 };
 
 // Initial render once DOM is ready
@@ -258,7 +452,7 @@ if (document.readyState === 'loading') {
     <!-- Chat Window Container -->
     <div
         id="ai-chatbot-window"
-        class="hidden fixed bottom-24 right-4 sm:right-6 z-[9999] w-[calc(100vw-2rem)] sm:w-96 h-[520px] max-h-[80vh] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden transition-all duration-200"
+        class="hidden fixed bottom-24 right-4 sm:right-6 z-[9999] w-[calc(100vw-2rem)] sm:w-[440px] md:w-[470px] h-[550px] max-h-[82vh] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 rounded-2xl shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden transition-all duration-200"
     >
         <!-- Header -->
         <div class="p-4 bg-slate-50/90 dark:bg-slate-950/90 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">

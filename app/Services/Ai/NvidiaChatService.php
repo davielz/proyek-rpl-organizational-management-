@@ -113,7 +113,14 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
 3. Kalimat penolakan resmi out-of-context: 'Maaf, saya adalah AI Assistant yang khusus bertugas membantu pengelolaan sistem organisasi mahasiswa di aplikasi ini. Saya tidak dapat melayani permintaan di luar konteks sistem ini (seperti penulisan kode pemrograman atau topik umum di luar aplikasi).'
 4. JANGAN PERNAH membeberkan informasi sensitif (dokumen proposal/LPJ organisasi, rincian anggaran, catatan review admin, kritik evaluasi sentimen, password, atau identitas admin rahasia) kepada pengguna biasa (Anggota). Informasi sensitif hanya diizinkan untuk Admin dan Pengurus organisasi terkait.
 5. Jawablah setiap pertanyaan seputar kegiatan, polling, diskusi, dokumen, ulasan, atau statistik dengan merujuk langsung pada data database yang disediakan di atas sesuai batas aksesnya. Jika data yang ditanyakan pengguna tidak tercatat di database atau berada di luar batas izin rolenya, jelaskan dengan sopan.
-6. Berikan jawaban yang informatif, solutif, ringkas, dan profesional dalam Bahasa Indonesia, dengan format Markdown yang rapi (gunakan bold, bullet points, atau tabel jika sesuai).";
+6. Berikan jawaban yang informatif, solutif, ringkas, dan profesional dalam Bahasa Indonesia, dengan format Markdown yang rapi (gunakan bold, bullet points, atau tabel jika sesuai).
+7. KETENTUAN PRESISI TERMINOLOGI 'PENGGUNA' VS 'ANGGOTA' (SANGAT KRUSIAL):
+   - 'Pengguna' (User / Akun) = Seluruh akun yang ada di sistem (gabungan Admin + Pengurus + Anggota).
+   - 'Anggota' (Member) = Khusus pengguna yang memiliki peranan (role) 'anggota' (BUKAN Admin dan BUKAN Pengurus).
+   - JIKA pengguna bertanya 'Berapa total anggota?', 'Jumlah anggota?', atau pertanyaan serupa seputar anggota, Anda HARUS MENJAWAB dengan jumlah pengguna dengan peranan 'anggota' (misalnya jika data menunjukkan Anggota: 14, Pengurus: 1, Admin: 1, maka jawab: 'Total anggota yang terdaftar adalah 14 orang'). DILARANG KERAS menjawab total seluruh pengguna (16 orang) sebagai jawaban dari total anggota!
+   - JIKA pengguna bertanya 'Berapa total pengguna?' atau 'Berapa total user sistem?', barulah Anda menjawab total seluruh pengguna (16 orang) beserta rincian peranannya.
+8. FORMAT TABEL MARKDOWN:
+   - Jika Anda menyajikan data dalam bentuk tabel, gunakan sintaks tabel Markdown standar GitHub Flavored Markdown (baris header | Kolom 1 | Kolom 2 |, baris pemisah |:---|:---|, dan baris data) secara rapi agar sistem dapat merendernya sebagai tabel yang bersih.";
 
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],
@@ -400,7 +407,39 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
             return "Halo {$userName}! Berikut adalah beberapa organisasi/UKM yang terdaftar di kampus:\n\n".implode("\n", $list).$notice;
         }
 
-        // Query: Statistik / Ringkasan Sistem
+        // Query: Total Anggota (Role 'anggota') spesifik
+        if (preg_match('/(total|jumlah|berapa)\s+(banyak\s+)?(anggota|member)/i', $lower) && ! preg_match('/(pengguna|user|akun)/i', $lower)) {
+            $anggotaCount = User::where('role', 'anggota')->count();
+            $totalUsers = User::count();
+            $adminCount = User::where('role', 'admin')->count();
+            $pengurusCount = User::where('role', 'pengurus')->count();
+
+            if ($isAdmin || $isPengurus) {
+                return "Halo {$userName}! Total **anggota** (pengguna dengan peranan anggota) yang terdaftar di sistem saat ini adalah **{$anggotaCount} orang**.\n\n".
+                    "*(Sebagai informasi pelengkap, di sistem ini terdapat juga {$adminCount} Admin dan {$pengurusCount} Pengurus, sehingga total seluruh pengguna adalah {$totalUsers} orang)*".$notice;
+            }
+
+            return "Halo {$userName}! Total **anggota** yang terdaftar di sistem saat ini adalah **{$anggotaCount} orang**.".$notice;
+        }
+
+        // Query: Total Pengguna / User spesifik
+        if (preg_match('/(total|jumlah|berapa)\s+(banyak\s+)?(pengguna|user|akun)/i', $lower) && ! preg_match('/(kegiatan|polling|diskusi|dokumen|organisasi)/i', $lower)) {
+            if ($isAnggota) {
+                return "Halo {$userName}. Sesuai kebijakan sistem, rincian data administratif akun pengguna hanya dapat diakses oleh Pengurus Organisasi dan Administrator.".$notice;
+            }
+
+            $totalUsers = User::count();
+            $adminCount = User::where('role', 'admin')->count();
+            $pengurusCount = User::where('role', 'pengurus')->count();
+            $anggotaCount = User::where('role', 'anggota')->count();
+
+            return "Halo {$userName}! Total **seluruh pengguna** yang terdaftar dalam sistem adalah **{$totalUsers} orang**, dengan rincian peranan:\n\n".
+                "• **Anggota**: {$anggotaCount} orang\n".
+                "• **Pengurus**: {$pengurusCount} orang\n".
+                "• **Admin**: {$adminCount} orang".$notice;
+        }
+
+        // Query: Statistik / Ringkasan Sistem Umum
         if (preg_match('/(statistik|ringkasan|overview|total|berapa banyak)/i', $lower)) {
             $totalEvents = Event::where('status', 'active')->count();
             $totalPolls = Poll::where('status', 'active')->count();
@@ -415,8 +454,11 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
 
             if ($isAdmin) {
                 $totalUsers = User::count();
+                $adminCount = User::where('role', 'admin')->count();
+                $pengurusCount = User::where('role', 'pengurus')->count();
+                $anggotaCount = User::where('role', 'anggota')->count();
                 $totalDocs = Document::count();
-                $reply .= "\n• **Total Pengguna Terdaftar**: {$totalUsers} pengguna\n".
+                $reply .= "\n• **Total Seluruh Pengguna**: {$totalUsers} pengguna (Anggota: {$anggotaCount}, Pengurus: {$pengurusCount}, Admin: {$adminCount})\n".
                     "• **Total Dokumen Proposal/LPJ**: {$totalDocs} dokumen";
             } elseif ($isPengurus && $user) {
                 $managedOrgIds = $user->organizations()->pluck('organizations.id')->toArray();
