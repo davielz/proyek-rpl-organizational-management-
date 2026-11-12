@@ -35,9 +35,10 @@ return [
         ],
     ],
 
-    'telegram' => [
-        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
-        'chat_id' => env('TELEGRAM_CHAT_ID'),
+    'fonnte' => [
+        'token' => env('FONNTE_TOKEN'),
+        'admin_phone' => env('WHATSAPP_ADMIN_PHONE', '083809578696'),
+        'endpoint' => env('FONNTE_ENDPOINT', 'https://api.fonnte.com/send'),
     ],
 
 ];

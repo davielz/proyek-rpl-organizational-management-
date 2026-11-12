@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Admin\UpdateRoleRequest;
 use App\Models\User;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 
 class AdminUserController extends Controller
@@ -19,7 +20,7 @@ class AdminUserController extends Controller
             $query->where('status', $status);
         }
 
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
@@ -52,16 +53,16 @@ class AdminUserController extends Controller
         return back()->with('success', "Role pengguna {$user->name} berhasil diubah dari {$oldRole} menjadi {$user->role}.");
     }
 
-    public function approve(Request $request, User $user, \App\Services\TelegramNotificationService $telegramService)
+    public function approve(Request $request, User $user, WhatsAppNotificationService $waService)
     {
         $user->status = 'active';
         $user->save();
 
-        $telegramSent = $telegramService->notifyUserAccountApproved($user);
+        $waSent = $waService->notifyUserAccountApproved($user);
 
         $msg = "Akun pengguna {$user->name} ({$user->email}) berhasil disetujui (ACC).";
-        if ($telegramSent) {
-            $msg .= " Pemberitahuan telah dikirimkan ke Telegram pemilik akun.";
+        if ($waSent) {
+            $msg .= " Pemberitahuan telah dikirimkan ke WhatsApp pemilik akun ({$user->phone}).";
         }
 
         return back()->with('success', $msg);

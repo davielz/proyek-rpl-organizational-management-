@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 
 class UserApprovalController extends Controller
@@ -10,10 +11,8 @@ class UserApprovalController extends Controller
     /**
      * Display a listing of user registrations pending approval or filter by status.
      */
-    public function index(Request $request, \App\Services\TelegramNotificationService $telegramService)
+    public function index(Request $request)
     {
-        $telegramService->syncIncomingUpdates();
-
         $status = $request->input('status', 'pending');
         $search = $request->input('search');
 
@@ -23,7 +22,7 @@ class UserApprovalController extends Controller
             $query->where('status', $status);
         }
 
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
@@ -46,7 +45,7 @@ class UserApprovalController extends Controller
     /**
      * Approve (ACC) the specified user's registration.
      */
-    public function approve(Request $request, User $user, \App\Services\TelegramNotificationService $telegramService)
+    public function approve(Request $request, User $user, WhatsAppNotificationService $waService)
     {
         if ($user->status === 'active') {
             return back()->with('info', "Akun {$user->name} sudah dalam keadaan aktif.");
@@ -55,11 +54,11 @@ class UserApprovalController extends Controller
         $user->status = 'active';
         $user->save();
 
-        $telegramSent = $telegramService->notifyUserAccountApproved($user);
+        $waSent = $waService->notifyUserAccountApproved($user);
 
         $msg = "Akun {$user->name} ({$user->email}) berhasil disetujui (ACC).";
-        if ($telegramSent) {
-            $msg .= " Pemberitahuan telah dikirimkan ke Telegram pemilik akun.";
+        if ($waSent) {
+            $msg .= " Pemberitahuan telah dikirimkan ke WhatsApp pemilik akun ({$user->phone}).";
         }
 
         return back()->with('success', $msg);
@@ -74,7 +73,7 @@ class UserApprovalController extends Controller
             return back()->with('error', 'Anda tidak dapat menolak akun Anda sendiri.');
         }
 
-        if ($user->isAdmin() && !$request->user()->isAdmin()) {
+        if ($user->isAdmin() && ! $request->user()->isAdmin()) {
             return back()->with('error', 'Pengurus tidak dapat menolak akun Administrator.');
         }
 

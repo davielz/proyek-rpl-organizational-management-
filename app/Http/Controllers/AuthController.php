@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
-use App\Services\TelegramNotificationService;
+use App\Services\WhatsAppNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -20,7 +20,7 @@ class AuthController extends Controller
     public function login(LoginRequest $request)
     {
         if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            /** @var \App\Models\User $user */
+            /** @var User $user */
             $user = Auth::user();
 
             if ($user->isPending()) {
@@ -58,7 +58,7 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    public function register(RegisterRequest $request, TelegramNotificationService $telegramService)
+    public function register(RegisterRequest $request, WhatsAppNotificationService $waService)
     {
         $user = User::create([
             'name' => $request->name,
@@ -69,12 +69,13 @@ class AuthController extends Controller
             'status' => 'pending',
         ]);
 
-        $telegramService->notifyNewUserRegistration($user);
+        $waService->notifyNewUserRegistration($user);
 
         return redirect()->route('login')->with([
-            'success' => 'Pendaftaran akun berhasil! Akun Anda sedang menunggu persetujuan (acc) dari Admin atau Pengurus sebelum dapat digunakan untuk masuk.',
-            'telegram_connect_user_id' => $user->id,
-            'telegram_connect_phone' => $user->phone,
+            'success' => 'Pendaftaran akun berhasil! Akun Anda sedang menunggu persetujuan (acc) dari Admin sebelum dapat digunakan untuk masuk.',
+            'whatsapp_notify' => true,
+            'registered_phone' => $user->phone,
+            'registered_name' => $user->name,
         ]);
     }
 

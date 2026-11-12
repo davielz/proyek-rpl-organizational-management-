@@ -14,8 +14,6 @@ use App\Http\Controllers\ManageEventController;
 use App\Http\Controllers\PollController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserApprovalController;
-use App\Services\TelegramNotificationService;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -26,14 +24,6 @@ Route::get('/', function () {
 
     return redirect()->route('login');
 });
-
-// Telegram Bot Webhook Route
-Route::post('/telegram/webhook', function (Request $request, TelegramNotificationService $telegramService) {
-    $update = $request->all();
-    $telegramService->processTelegramUpdate($update);
-
-    return response()->json(['ok' => true]);
-})->name('telegram.webhook');
 
 // Guest Routes
 Route::middleware('guest')->group(function () {

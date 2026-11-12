@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'password', 'role', 'phone', 'avatar', 'status', 'telegram_chat_id'])]
+#[Fillable(['name', 'email', 'password', 'role', 'phone', 'avatar', 'status'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -60,9 +60,23 @@ class User extends Authenticatable
         return $this->status === 'rejected';
     }
 
-    public function hasTelegram(): bool
+    public function hasPhone(): bool
     {
-        return ! empty($this->telegram_chat_id);
+        return ! empty($this->phone);
+    }
+
+    public function getWhatsappUrlAttribute(): ?string
+    {
+        if (empty($this->phone)) {
+            return null;
+        }
+
+        $cleanPhone = preg_replace('/[^0-9]/', '', $this->phone);
+        if (str_starts_with($cleanPhone, '0')) {
+            $cleanPhone = '62'.substr($cleanPhone, 1);
+        }
+
+        return 'https://wa.me/'.$cleanPhone;
     }
 
     public function scopeActive($query)
