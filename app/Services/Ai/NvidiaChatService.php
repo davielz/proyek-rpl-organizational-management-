@@ -140,7 +140,11 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
    - JIKA pengguna bertanya 'Berapa total anggota?', 'Jumlah anggota?', atau pertanyaan serupa seputar anggota, Anda HARUS MENJAWAB dengan jumlah pengguna dengan peranan 'anggota' (misalnya jika data menunjukkan Anggota: 14, Pengurus: 1, Admin: 1, maka jawab: 'Total anggota yang terdaftar adalah 14 orang'). DILARANG KERAS menjawab total seluruh pengguna (16 orang) sebagai jawaban dari total anggota!
    - JIKA pengguna bertanya 'Berapa total pengguna?' atau 'Berapa total user sistem?', barulah Anda menjawab total seluruh pengguna (16 orang) beserta rincian peranannya.
 8. FORMAT TABEL MARKDOWN:
-   - Jika Anda menyajikan data dalam bentuk tabel, gunakan sintaks tabel Markdown standar GitHub Flavored Markdown (baris header | Kolom 1 | Kolom 2 |, baris pemisah |:---|:---|, dan baris data) secara rapi agar sistem dapat merendernya sebagai tabel yang bersih.";
+   - Jika Anda menyajikan data dalam bentuk tabel, gunakan sintaks tabel Markdown standar GitHub Flavored Markdown (baris header | Kolom 1 | Kolom 2 |, baris pemisah |:---|:---|, dan baris data) secara rapi agar sistem dapat merendernya sebagai tabel yang bersih.
+9. DAFTAR & NAMA-NAMA ANGGOTA (ROLE 'ANGGOTA'):
+   - JIKA pengguna bertanya 'Siapa nama-nama anggotanya?', 'Sebutkan nama anggotanya', 'Daftar nama anggota', atau pertanyaan serupa tentang siapa saja anggota yang terdaftar, Anda HARUS MENJAWAB dengan menyebutkan daftar nama-nama anggota yang tercantum pada data database [9. DAFTAR NAMA ANGGOTA MAHASISWA TERDAFTAR] secara lengkap, jelas, dan berurutan (misalnya menggunakan format penomoran 1., 2., dst atau bullet points).
+   - DILARANG menolak atau menjawab tidak tahu jika datanya sudah tersedia di data database.
+   - Pembedaan role tetap berlaku: yang disebutkan sebagai 'anggota' adalah pengguna dengan role 'anggota', BUKAN Admin dan BUKAN Pengurus.";
 
         $trimmedHistory = array_slice($history, -6);
 
@@ -508,6 +512,64 @@ ATURAN UTAMA & BATASAN DOMAIN (MANDATORI):
             }
 
             return "Halo {$userName}! Total **anggota** yang terdaftar di sistem saat ini adalah **{$anggotaCount} orang**.".$notice;
+        }
+
+        // Query: Siapa nama-nama anggotanya / Daftar nama anggota
+        if (preg_match('/(siapa|daftar|sebutkan|tampilkan|nama)\s+(nama\s+)?(anggota|member)/i', $lower)
+            || preg_match('/(siapa|nama-nama|nama\s+nama)\s+(saja\s+)?anggotanya/i', $lower)
+            || preg_match('/siapa\s+(saja\s+)?(anggota|member)/i', $lower)
+            || preg_match('/nama-nama\s+anggota/i', $lower)
+            || preg_match('/anggotanya\s+siapa/i', $lower)
+            || preg_match('/daftar\s+(nama\s+)?anggota/i', $lower)) {
+
+            $membersQuery = User::with('organizations')->where('role', 'anggota');
+            if (! $isAdmin) {
+                $membersQuery->where('status', 'active');
+            }
+
+            // Check if user is asking for members of a specific organization (e.g. "Siapa anggota HMTI?")
+            $orgs = Organization::all();
+            $targetOrg = null;
+            foreach ($orgs as $org) {
+                if (str_contains($lower, mb_strtolower($org->name)) || ($org->code && str_contains($lower, mb_strtolower($org->code)))) {
+                    $targetOrg = $org;
+                    break;
+                }
+            }
+
+            if ($targetOrg) {
+                $orgMembers = (clone $membersQuery)->whereHas('organizations', fn ($q) => $q->where('organizations.id', $targetOrg->id))->get();
+                $count = $orgMembers->count();
+
+                if ($orgMembers->isEmpty()) {
+                    return "Halo {$userName}, belum ada data anggota yang terdaftar di organisasi **{$targetOrg->name}**.".$notice;
+                }
+
+                $list = [];
+                foreach ($orgMembers as $idx => $m) {
+                    $list[] = ($idx + 1).". **{$m->name}**".($isAdmin ? " ({$m->email})" : '');
+                }
+
+                return "Halo {$userName}! Berikut adalah daftar nama-nama anggota organisasi **{$targetOrg->name}** (total {$count} orang):\n\n"
+                    .implode("\n", $list).$notice;
+            }
+
+            $members = $membersQuery->orderBy('name')->get();
+            $totalCount = $members->count();
+
+            if ($members->isEmpty()) {
+                return "Halo {$userName}, saat ini belum ada anggota yang terdaftar di database sistem.".$notice;
+            }
+
+            $list = [];
+            foreach ($members as $idx => $m) {
+                $orgNames = $m->organizations->pluck('name')->implode(', ');
+                $orgNote = $orgNames ? " [{$orgNames}]" : '';
+                $list[] = ($idx + 1).". **{$m->name}**{$orgNote}".($isAdmin ? " ({$m->email})" : '');
+            }
+
+            return "Halo {$userName}! Berikut adalah daftar nama-nama anggota yang terdaftar dalam sistem (total {$totalCount} orang):\n\n"
+                .implode("\n", $list).$notice;
         }
 
         // Query: Total Pengguna / User spesifik

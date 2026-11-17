@@ -45,9 +45,9 @@ class ChatbotDatabaseContextTest extends TestCase
         $context = $this->contextService->buildContext(user: $admin);
 
         $this->assertStringContainsString('[1. RINGKASAN STATISTIK DATABASE SISTEM (KHUSUS ADMINISTRATOR)]', $context);
-        $this->assertStringContainsString('Total Organisasi Terdaftar: ' . Organization::count() . ' organisasi/UKM', $context);
-        $this->assertStringContainsString('Total Pengguna: ' . User::count() . ' orang', $context);
-        $this->assertStringContainsString('Total Kegiatan Mahasiswa: ' . Event::count() . ' kegiatan (Aktif/Dibuka: 3', $context);
+        $this->assertStringContainsString('Total Organisasi Terdaftar: '.Organization::count().' organisasi/UKM', $context);
+        $this->assertStringContainsString('Total Pengguna: '.User::count().' orang', $context);
+        $this->assertStringContainsString('Total Kegiatan Mahasiswa: '.Event::count().' kegiatan (Aktif/Dibuka: 3', $context);
         $this->assertStringContainsString('Total Polling & Voting: 2 polling (Aktif berjalan: 2', $context);
         $this->assertStringContainsString('Total Ruang Diskusi: 4 topik diskusi', $context);
     }
@@ -250,6 +250,20 @@ class ChatbotDatabaseContextTest extends TestCase
         $this->assertStringContainsString('Konser Amal Tahunan [Status: registered]', $context);
     }
 
+    public function test_it_includes_registered_members_list_in_database_context(): void
+    {
+        User::factory()->create(['name' => 'Dimas Anggota A', 'role' => 'anggota', 'status' => 'active']);
+        User::factory()->create(['name' => 'Siti Anggota B', 'role' => 'anggota', 'status' => 'active']);
+        User::factory()->create(['name' => 'Budi Admin Sistem', 'role' => 'admin', 'status' => 'active']);
+
+        $context = $this->contextService->buildContext();
+
+        $this->assertStringContainsString("[9. DAFTAR NAMA ANGGOTA MAHASISWA TERDAFTAR (ROLE 'ANGGOTA'", $context);
+        $this->assertStringContainsString('Dimas Anggota A', $context);
+        $this->assertStringContainsString('Siti Anggota B', $context);
+        $this->assertStringNotContainsString('Budi Admin Sistem', $context);
+    }
+
     public function test_it_performs_targeted_search_on_specific_keywords(): void
     {
         Event::factory()->create([
@@ -301,6 +315,7 @@ class ChatbotDatabaseContextTest extends TestCase
 
         Http::assertSent(function ($request) {
             $systemMsg = collect($request['messages'])->firstWhere('role', 'system')['content'] ?? '';
+
             return str_contains($systemMsg, 'AKSES DATABASE SISTEM (REAL-TIME DATA)')
                 && str_contains($systemMsg, 'KEBIJAKAN HAK AKSES & KEAMANAN INFORMASI')
                 && str_contains($systemMsg, 'PENGGUNA MEMILIKI HAK AKSES ADMINISTRATOR')

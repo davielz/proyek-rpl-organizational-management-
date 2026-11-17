@@ -130,4 +130,30 @@ class ChatbotFallbackTest extends TestCase
         $this->assertTrue($result['success']);
         $this->assertStringContainsString('dokumen proposal & LPJ internal organisasi bersifat rahasia dan hanya dapat diakses oleh Pengurus Organisasi serta Administrator', $result['reply']);
     }
+
+    public function test_chatbot_can_list_member_names_when_asked(): void
+    {
+        $admin = User::factory()->create(['name' => 'Admin Utama', 'role' => 'admin']);
+        $member1 = User::factory()->create(['name' => 'Budi Santoso', 'role' => 'anggota', 'status' => 'active']);
+        $member2 = User::factory()->create(['name' => 'Siti Nurhaliza', 'role' => 'anggota', 'status' => 'active']);
+
+        Http::fake([
+            'https://integrate.api.nvidia.com/*' => function () {
+                throw new ConnectionException('Timeout');
+            },
+        ]);
+
+        $service = app(NvidiaChatService::class);
+        $result = $service->chat(
+            message: 'Siapa nama-nama anggotanya?',
+            userName: $admin->name,
+            userRole: ucfirst($admin->role),
+            user: $admin
+        );
+
+        $this->assertTrue($result['success']);
+        $this->assertStringContainsString('daftar nama-nama anggota', $result['reply']);
+        $this->assertStringContainsString('Budi Santoso', $result['reply']);
+        $this->assertStringContainsString('Siti Nurhaliza', $result['reply']);
+    }
 }

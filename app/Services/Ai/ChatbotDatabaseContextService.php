@@ -70,7 +70,13 @@ class ChatbotDatabaseContextService
                 $sections[] = $this->getUserSpecificSection($user);
             }
 
-            // 9. Targeted / Keyword Search matching the user's specific query (Role-filtered)
+            // 9. Members / Anggota (Role 'anggota') list
+            $sections[] = $this->getMembersSection($user, $isAdmin, $isPengurus);
+
+            // 10. Organization Officers / Pengurus (Role 'pengurus') list
+            $sections[] = $this->getPengurusSection($user, $isAdmin, $isPengurus);
+
+            // 11. Targeted / Keyword Search matching the user's specific query (Role-filtered)
             if (! empty(trim($userMessage))) {
                 $searchSection = $this->getTargetedSearchSection($userMessage, $user, $isAdmin, $isPengurus, $managedOrgIds);
                 if (! empty($searchSection)) {
@@ -467,7 +473,74 @@ TEXT;
     }
 
     /**
-     * 9. Targeted search based on words extracted from user message (Role-filtered).
+     * 9. List of registered members (Role 'anggota') in database.
+     */
+    protected function getMembersSection(?User $user, bool $isAdmin, bool $isPengurus): string
+    {
+        $query = User::with('organizations')->where('role', 'anggota');
+
+        if (! $isAdmin) {
+            $query->where('status', 'active');
+        }
+
+        $members = $query->orderBy('name')->take(60)->get();
+        $totalCount = User::where('role', 'anggota')->count();
+
+        if ($members->isEmpty()) {
+            return "[9. DAFTAR NAMA ANGGOTA MAHASISWA TERDAFTAR (ROLE 'ANGGOTA')]\n(Belum ada data anggota yang terdaftar di database)";
+        }
+
+        $lines = [
+            "[9. DAFTAR NAMA ANGGOTA MAHASISWA TERDAFTAR (ROLE 'ANGGOTA' - TOTAL: {$totalCount} ORANG)]",
+            'PENTING: Gunakan data nama di bawah ini jika pengguna bertanya "Siapa nama-nama anggotanya?", "Sebutkan nama anggotanya", atau pertanyaan seputar daftar nama anggota:',
+        ];
+
+        foreach ($members as $index => $m) {
+            $num = $index + 1;
+            $orgNames = $m->organizations->pluck('name')->implode(', ');
+            $orgStr = $orgNames ? " [Organisasi: {$orgNames}]" : '';
+            if ($isAdmin) {
+                $lines[] = "{$num}. {$m->name}{$orgStr} (Email: {$m->email}, Status: {$m->status})";
+            } else {
+                $lines[] = "{$num}. {$m->name}{$orgStr}";
+            }
+        }
+
+        if ($totalCount > $members->count()) {
+            $remaining = $totalCount - $members->count();
+            $lines[] = "... dan {$remaining} anggota lainnya.";
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * 10. List of organization officers (Role 'pengurus') in database.
+     */
+    protected function getPengurusSection(?User $user, bool $isAdmin, bool $isPengurus): string
+    {
+        $officers = User::with('organizations')->where('role', 'pengurus')->where('status', 'active')->orderBy('name')->get();
+
+        if ($officers->isEmpty()) {
+            return '';
+        }
+
+        $lines = [
+            "[10. DAFTAR PENGURUS ORGANISASI (ROLE 'PENGURUS' - TOTAL: ".$officers->count().' ORANG)]',
+        ];
+
+        foreach ($officers as $index => $p) {
+            $num = $index + 1;
+            $orgNames = $p->organizations->pluck('name')->implode(', ');
+            $orgStr = $orgNames ? " [Organisasi: {$orgNames}]" : '';
+            $lines[] = "{$num}. {$p->name}{$orgStr}";
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * 11. Targeted search based on words extracted from user message (Role-filtered).
      */
     protected function getTargetedSearchSection(string $query, ?User $user, bool $isAdmin, bool $isPengurus, array $managedOrgIds): string
     {
@@ -598,6 +671,48 @@ TEXT;
                     $docLines[] = "- \"{$d->title}\" (Tipe: ".strtoupper($d->type).", Status: {$d->status}, Terkait Kegiatan: \"{$event}\", Pengaju: {$submitter})\n  Latar Belakang: ".Str::limit(strip_tags($d->background), 200)."\n  Catatan Review: ".($d->notes ?: 'Tidak ada catatan');
                 }
                 $results[] = implode("\n", $docLines);
+            }
+        }
+
+        // 5. Search Members / Anggota
+        if (preg_match('/(anggota|member|nama|siapa)/i', $query)) {
+            $memberQuery = User::with('organizations')->where('role', 'anggota');
+            if (! $isAdmin) {
+                $memberQuery->where('status', 'active');
+            }
+
+            // Check if user mentioned an organization name/code
+            $allOrgs = Organization::all();
+            foreach ($allOrgs as $org) {
+                if (str_contains(mb_strtolower($query), mb_strtolower($org->name)) || ($org->code && str_contains(mb_strtolower($query), mb_strtolower($org->code)))) {
+                    $orgMembers = (clone $memberQuery)->whereHas('organizations', fn ($q) => $q->where('organizations.id', $org->id))->get();
+                    if ($orgMembers->isNotEmpty()) {
+                        $orgLines = ["[PENCARIAN KHUSUS: ANGGOTA ORGANISASI {$org->name}]"];
+                        foreach ($orgMembers as $idx => $om) {
+                            $orgLines[] = ($idx + 1).". {$om->name}";
+                        }
+                        $results[] = implode("\n", $orgLines);
+                    }
+                }
+            }
+
+            // Check if matching specific name keywords
+            if (! empty($keywords)) {
+                $nameMatches = (clone $memberQuery)->where(function ($q) use ($keywords) {
+                    foreach ($keywords as $word) {
+                        $q->orWhere('name', 'like', "%{$word}%");
+                    }
+                })->take(10)->get();
+
+                if ($nameMatches->isNotEmpty()) {
+                    $memberLines = ['[PENCARIAN KHUSUS: NAMA ANGGOTA RELEVAN DARI DATABASE]'];
+                    foreach ($nameMatches as $idx => $m) {
+                        $orgs = $m->organizations->pluck('name')->implode(', ');
+                        $orgStr = $orgs ? " [{$orgs}]" : '';
+                        $memberLines[] = ($idx + 1).". {$m->name}{$orgStr} (Status: {$m->status})";
+                    }
+                    $results[] = implode("\n", $memberLines);
+                }
             }
         }
 
