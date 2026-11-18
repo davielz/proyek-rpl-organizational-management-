@@ -1,3 +1,10 @@
+# Tugas Mata Kuliah Rekayasa Perangkat Lunak
+- Nama : Davi Firdaus
+- NIM : 41257096
+- Tema : Management
+- Video demonstrasi : [https://youtu.be/jGpw9ajXtA0?si=B1c3hn6jyGRSAab2](https://youtu.be/jGpw9ajXtA0?si=B1c3hn6jyGRSAab2)
+
+
 # Campus Organization Management System
 
 ![Laravel](https://img.shields.io/badge/Laravel-12.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)
